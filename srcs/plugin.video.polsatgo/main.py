@@ -887,8 +887,7 @@ def vodSzukaj(query):
 
     mud='playVOD'
     folder=False
-    isplay=False
-    ss='0'
+    isplay=True
 
     try:
         aa = response['result']['results']
@@ -908,10 +907,11 @@ def vodSzukaj(query):
         otal = 0
 
     for i in aa:
+        ss='0';
         if 'keyCategoryId' in i:
-            #mud='vodlist'
-            #folder=True
-            #isplay=False
+            mud='vodlist'
+            folder=True
+            isplay=False
 
             if i['keyCategoryId'] == i['id']:
                 ss='1'
@@ -919,10 +919,12 @@ def vodSzukaj(query):
         else:
             mud='playVOD'
             folder=False
-            isplay=False
+            isplay=True
+
 
         item = {}
         for j in myperms:
+            item["cpid"] = i['cpid']
             if i.get('thumbnails',None):
                 item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
             else:
@@ -961,7 +963,10 @@ def vodSzukaj(query):
             else:
                 idc = idc.split('|')[0]
         else:
-            mud = 'playVOD'
+            if item['cpid'] == 0:
+                mud = 'playCPGO'
+            else:
+                mud = 'playVOD'
             folder=False
             isplay=True
 
@@ -973,7 +978,6 @@ def vodSzukaj(query):
         else:
 
             contextmenu.append(('[B][COLOR lightgreen]Dodaj do MOJEJ LISTY[/B][/COLOR]', 'RunPlugin(plugin://plugin.video.polsatgo?mode=DodajUsun&url=%s)'%str(idc)))
-
 
         add_item(name=item.get('title'), url=idc, mode=mud, image=item.get('img'), folder=folder, isPlayable=isplay, infoLabels={'title':item.get('title'),'plot':item.get('plot')}, contextmenu=contextmenu, itemcount=itemz,FANART=FANART)
     xbmcplugin.endOfDirectory(addon_handle)
@@ -1100,7 +1104,7 @@ def vodList(id):
     mud='playVOD'
     folder=False
     isplay=True
-    ss='0'
+
 
     try:
 
@@ -1120,7 +1124,7 @@ def vodList(id):
         otal = 0
 
     for i in aa:
-
+        ss='0'
         if 'keyCategoryId' in i:
             if i['keyCategoryId'] == i['id']:
                 ss='1'
@@ -1400,4 +1404,3 @@ def router(paramstring):
 
 if __name__ == '__main__':
     router(sys.argv[2][1:])
-
