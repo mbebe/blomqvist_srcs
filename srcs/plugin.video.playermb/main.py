@@ -69,7 +69,10 @@ from resources.lib.udata import AddonUserData
 # from resources.lib.tools import U, uclean, NN, fragdict
 
 
-MetaDane = namedtuple('MetaDane', 'tytul opis foto sezon epizod fanart thumb')
+MetaDane = namedtuple('MetaDane', 'tytul opis foto sezon epizod fanart thumb landscape poster')
+MetaDane.__new__.__defaults__ = 4*(None,)
+MetaDane.art = property(lambda self: {k: v for k in 'fanart thumb landscape poster'.split()
+                                      for v in (getattr(self, k),) if v})
 
 UA = 'okhttp/3.3.1 Android'
 # UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:87.0) Gecko/20100101 Firefox/87.0'
@@ -165,8 +168,8 @@ def build_url(query):
 
 
 def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=None, movie=True,
-             itemcount=1, page=1, fanart=None, moviescount=0, properties=None, thumb=None, 
-             contextmenu=None):
+             itemcount=1, page=1, fanart=None, moviescount=0, properties=None, thumb=None,
+             contextmenu=None, art=None):
     list_item = xbmcgui.ListItem(label=name)
     if isPlayable:
         list_item.setProperty("isPlayable", 'True')
@@ -177,16 +180,17 @@ def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=
         image = ADDON_ICON
     if image.startswith('//'):
         image = 'https:' + image
-    if fanart and fanart.startswith('//'):
-        fanart = 'https:' + fanart
-    if thumb and thumb.startswith('//'):
-        thumb = 'https:' + thumb
-    list_item.setArt({
-        'thumb': thumb or image,
-        'poster': image,
-        'banner': image,
-        'fanart': fanart or FANART,
-    })
+    art = {} if art is None else dict(art)
+    if fanart:
+        art['fanart'] = fanart
+    if thumb:
+        art['thumb'] = fanart
+    art.setdefault('thumb', image)
+    art.setdefault('poster', image)
+    art.setdefault('banner', art.get('landscape', image))
+    art.setdefault('fanart', FANART)
+    art = {k: 'https:' + v if v.startswith('//') else v for k, v in art.items()}
+    list_item.setArt(art)
     if properties:
         list_item.setProperties(properties)
     if contextmenu:
@@ -212,7 +216,7 @@ def getmenu():
         mud="listcateg"
         if menu['slug']=='live':
             mud='listcateg'
-        add_item(str(menu['url'])+':'+menu['slug'], menu['title'], ADDON_ICON, mud, folder=True,fanart=FANART)
+        add_item(str(menu['url'])+':'+menu['slug'], menu['title'], ADDON_ICON, mud, folder=True)
 
 
 def remove_html_tags(text, nice=True):
@@ -469,9 +473,13 @@ class PLAYERPL(object):
         if opis:
             opis = remove_html_tags(opis).strip()
         images = {}
+        # See: https://kodi.wiki/view/Artwork_types
+        # New art images must be added to MetaDane
         for prop, (iname, uname) in {'foto': ('pc', 'mainUrl'),
                                      'fanart': ('smart_tv', 'mainUrl'),
-                                     'thumb': ('smart_tv', 'miniUrl')}.items():
+                                     'thumb': ('smart_tv', 'miniUrl'),
+                                     'poster': ('vertical', 'mainUrl'),
+                                     'landscape': ('smart_tv', 'mainUrl')}.items():
             try:
                 images[prop] = data['images'][iname][0][uname]
             except (KeyError, IndexError) as exc:
@@ -490,7 +498,6 @@ class PLAYERPL(object):
             images['fanart'] = '%s?%s' % (iurl, urlencode(iparams))
         sezon = bool(data.get('showSeasonNumber')) or data.get('type') == 'SERIAL'
         epizod = bool(data.get("showEpisodeNumber"))
-        # xbmc.log('PLAYER.PL: meta: %r' % (MetaDane(tytul, opis, sezon=sezon, epizod=epizod, **images),), xbmc.LOGWARNING)  # DEBUG only, TODO: remove
         return MetaDane(tytul, opis, sezon=sezon, epizod=epizod, **images)
 
     def createDatas(self):
@@ -612,7 +619,7 @@ class PLAYERPL(object):
             set_setting('selected_profile_id', self.SELECTED_PROFILE_ID)
             set_setting('selected_profile', self.SELECTED_PROFILE)
         if self.LOGGED != 'true':
-            add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ADDON_ICON, "login", folder=False,fanart=FANART)
+            add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ADDON_ICON, "login", folder=False)
 
     def getTranslate(self,id_):
 
@@ -847,16 +854,48 @@ class PLAYERPL(object):
         because folder is not playable.
         """
         if vid in self.mylist or not self.skip_unaviable:
-            if isPlayable is None:
+            no_acccess = not (mud or '').strip()
+            if no_acccess:
+                isPlayable = False
+                folder = True
+            elif isPlayable is None:
                 isPlayable = not folder
+            if suffix is None and no_acccess:
+                # auto suffix for non-playable video
+                suffix = ' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
             suffix = suffix or ''
+            descr = PLchar(meta.opis or meta.tytul) + '\n' + suffix
             info = {
                 'title': PLchar(meta.tytul) + suffix,
-                'plot': PLchar(meta.opis or meta.tytul) + '\n' + suffix,
+                'plot': descr,
+                'plotoutline': descr,
+                'tagline': descr,
+                # 'genre': 'Nawalanka',  # this is shown in Arctic: Zephyr 2 - Resurrection Mod
             }
             add_item(str(vid), PLchar(meta.tytul) + suffix, meta.foto or ADDON_ICON, mud,
-                     folder=folder, isPlayable=isPlayable, fanart=meta.fanart or FANART,
-                     infoLabels=info)
+                     folder=folder, isPlayable=isPlayable, infoLabels=info, art=meta.art)
+
+    def process_vod_list(self, vod_list, subitem=None):
+        """
+        Process list of VOD items.
+        Check if playable or serial. Add items to Kodi list.
+        """
+        with open('/tmp/kodi.json', 'w') as f:
+            json.dump(vod_list, f)
+        for vod in vod_list:
+            if subitem:
+                vod = vod[subitem]
+            vid = vod['id']
+            meta = self.getMetaDane(vod)
+            mud, fold = ' ', None
+            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus"):
+                if vod['type'] == 'SERIAL':
+                    mud = 'listcategSerial'
+                    fold = True
+                else:
+                    mud = 'playvid'
+                    fold = False
+            self.add_media_item(mud, vid, meta, folder=fold)
 
     def listCollection(self):
         self.refreshTokenTVN()
@@ -873,7 +912,7 @@ class PLAYERPL(object):
                 'plot': PLchar(meta.opis or meta.tytul) + '\n' + dod
             }
             add_item(str(vid)+':'+str(slug), meta.tytul, meta.foto, mud, folder=True,
-                     fanart=meta.fanart, infoLabels=info)
+                     infoLabels=info, art=meta.art)
         setView('movies')
         # xbmcplugin.setContent(addon_handle, 'movies')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
@@ -885,35 +924,17 @@ class PLAYERPL(object):
         data = getRequests('https://player.pl/playerapi/subscriber/bookmark',
                            headers=self.HEADERS2, params=self.params(type='FAVOURITE'))
         try:
-            vods = data['items']
-            if len(vods)>0:
-                for vod in vods:
-                    vod=vod['item']
-                    id_=vod['id']
-
-                    typ = vod['type']
-                    foto = vod['images']['pc'][0]['mainUrl']
-                    tytul = vod["title"]
-                    opis = remove_html_tags(vod["lead"])
-                    dod=''
-                    mud = 'listcategSerial'
-                    fold = True
-                    playk =False
-                    if typ != 'SERIAL':
-                        mud = 'playvid'
-                        fold = False
-                        playk =True
-                    add_item(id_, PLchar(tytul)+dod, foto, mud, folder=fold, isPlayable=playk, fanart=FANART)
+            self.process_vod_list(data['items'], subitem='item')
             setView('tvshows')
-            #xbmcplugin.setContent(addon_handle, 'tvshows')
-            xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+            # xbmcplugin.setContent(addon_handle, 'tvshows')
+            xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
             xbmcplugin.endOfDirectory(addon_handle)
         except:
+            # Kodi Favorites
             xbmc.executebuiltin("ActivateWindow(10134)")
 
     def listSearch(self, query):
         self.refreshTokenTVN()
-        mylist = self.load_mylist()
         PARAMS = self.params(keyword=query)
 
         urlk = 'https://player.pl/playerapi/product/live/search'
@@ -925,42 +946,9 @@ class PLAYERPL(object):
         #     for live in lives:
         #         ac=''
         urlk = 'https://player.pl/playerapi/product/vod/search'
-
-        vods = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
-        vods = vods['items']
-        if len(vods) > 0:
-            for vod in vods:
-                id_=vod['id']
-
-                typ = vod['type']
-                foto = vod['images']['pc'][0]['mainUrl']
-                tytul = vod["title"]
-                opis = remove_html_tags(vod["lead"])
-                dod=''
-                mud = 'listcategSerial'
-                fold = True
-                playk =False
-
-                if vod.get("payable",None) or vod.get("ncPlus",None):
-
-                    if vod['id'] not in mylist:
-                        dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                        fold = True
-                        playk =False
-                        mud = ' '
-                if typ != 'SERIAL':
-                    mud = 'playvid'
-                    fold = False
-                    playk =True
-                    if vod.get("payable",None) or vod.get("ncPlus",None):
-                        if vod['id'] not in mylist:
-                            dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                            fold =False
-                            playk =False
-                            mud = ' '
-                if vod['id'] in mylist or not self.skip_unaviable:
-                    add_item(id_, PLchar(tytul)+dod, foto, mud, folder=fold, isPlayable=playk, fanart=FANART)
-        #setView('tvshows')
+        data = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
+        self.process_vod_list(data['items'])
+        # setView('tvshows')
         xbmcplugin.setContent(addon_handle, 'videos')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
@@ -972,32 +960,21 @@ class PLAYERPL(object):
         urlk = 'https://player.pl/playerapi/product/vod/serial/%s/season/%s/episode/list' % (idmain, idsezon)
 
         epizody = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
-        mylist = self.load_mylist()
-        mud = 'playvid'
-        fold = False
-        for f in epizody:
-            urlid = str(f["id"])
-            epiz = f["episode"]
-            opis = remove_html_tags(f["lead"])
-            foto = f['images']['pc'][0]['mainUrl']
-            sez = (f["season"]["number"])
-            tyt = PLchar((f["season"]["serial"]["title"]))
-            if 'fakty-' in f.get('shareUrl',None):
-                tytul = '%s - %s'%(tyt,PLchar(f['title']))
+        for vod in epizody:
+            vid = vod['id']
+            meta = self.getMetaDane(vod)
+            epiz = vod["episode"]
+            sez = (vod["season"]["number"])
+            tyt = PLchar((vod["season"]["serial"]["title"]))
+            if 'fakty-' in vod.get('shareUrl', ''):
+                tytul = '%s - %s' % (tyt, PLchar(vod['title']))
             else:
-                tytul = '%s - S%02dE%02d'%(tyt,sez,epiz)
-            dod=''
-            mud ='playvid'
-            fold =False
-            playk =True
-            if f.get("payable",None) or f.get("ncPlus",None):
-                if f['id'] not in mylist:
-                    dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                    playk =False
-                    fold = False
-                    mud = '   '
-            if f['id'] in mylist or not self.skip_unaviable:
-                add_item(urlid, PLchar(tytul)+dod, foto, mud, folder=fold, isPlayable=playk, infoLabels={'plot':opis}, fanart=FANART)
+                tytul = '%s - S%02dE%02d' % (tyt, sez, epiz)
+            mud = ' '
+            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus"):
+                mud = 'playvid'
+            meta = meta._replace(tytul=tytul)
+            self.add_media_item(mud, vid, meta, folder=False)
         setView('episodes')
         # xbmcplugin.setContent(addon_handle, 'episodes')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
@@ -1040,28 +1017,7 @@ class PLAYERPL(object):
         vid, slug = idslug.split(':')
         urlk = 'https://player.pl/playerapi/product/section/%s' % (vid)
         data = getRequests(urlk, headers=self.HEADERS2, params=self.params(maxResults=True))
-
-        mylist = self.load_mylist()
-
-        items = data['items']
-        for item in items:
-            meta = self.getMetaDane(item)
-            dod = ''
-
-            fold = False
-            playk = True
-            mud = 'playvid'
-
-            if item["type"] == 'SERIAL':
-                fold = True
-                mud = 'listcategSerial'
-                playk = False
-            if item.get("payable") or item.get("ncPlus"):
-                if item['id'] not in mylist:
-                    dod = ' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                    playk = False
-                    mud = '   '
-            self.add_media_item(mud, item['id'], meta, dod, folder=fold, isPlayable=playk)
+        self.process_vod_list(data['items'])
         setView('movies')
         # xbmcplugin.setContent(int(sys.argv[1]), 'movies')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
@@ -1071,31 +1027,11 @@ class PLAYERPL(object):
     def listCategContent(self, idslug):
         self.refreshTokenTVN()
         gid, slug = idslug.split(':')
-        # data = self.slug_data(idslug, maxResults=250 if gid else self.MaxMax)
         data = self.slug_data(idslug, maxResults=True if gid else self.MaxMax)
-        mylist = self.load_mylist()
-
-        items = data['items']
-        for item in items:
-            dod = ''
-            fold = False
-            playk = True
-            mud = 'playvid'
-            if item["type"] == 'SERIAL':
-                fold = True
-                mud = 'listcategSerial'
-                playk = False
-            if item["payable"]:
-                if item['id'] not in mylist:
-                    dod = ' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                    playk = False
-                    mud = '   '
-            if item['id'] in mylist or not self.skip_unaviable:
-                meta = self.getMetaDane(item)
-                self.add_media_item(mud, item['id'], meta, dod, folder=fold, isPlayable=playk)
+        self.process_vod_list(data['items'])
         setView('tvshows')
-        #xbmcplugin.setContent(int(sys.argv[1]), 'tvshows')
-        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+        # xbmcplugin.setContent(int(sys.argv[1]), 'tvshows')
+        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
 
     def getTvs(self):
@@ -1169,7 +1105,7 @@ class PLAYERPL(object):
                     name = fmt.format(name=name, count=count)
                 image = media('genre/%s.png' % f['id'], fallback=ADDON_ICON)
                 add_item(urlk, name, image, mode='listcategContent', folder=True, isPlayable=False,
-                         fanart=FANART, properties=f.get('_props_'))
+                         properties=f.get('_props_'))
 
         xbmc.log('PLAYER.PL: folder items done', xbmc.LOGWARNING)
         setView('tvshows')
