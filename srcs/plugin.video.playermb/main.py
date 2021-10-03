@@ -427,6 +427,7 @@ class PLAYERPL(object):
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
         self.skip_unaviable = addon.getSetting('avaliable_only').lower() == 'true'
         self.verify_ssl = addon.getSetting('verify_ssl').lower() == 'true'
+        self.partial_size = int(addon.getSetting('partial_size') or 1000)
         # self.force_media_fanart = addon.getSetting('self.force_media_fanart').lower() == 'true'
         self.force_media_fanart = True
         self.force_media_fanart_width = 1280
@@ -444,7 +445,7 @@ class PLAYERPL(object):
         params = dict(self.PARAMS)
         if maxResults:
             if maxResults is True:
-                maxResults = self.MaxMax if self.skip_unaviable else 250
+                maxResults = self.MaxMax if self.skip_unaviable else self.partial_size
             params['maxResults'] = maxResults or 0
             params['firstResult'] = 0
         params.update(kwargs)

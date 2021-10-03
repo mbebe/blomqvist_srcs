@@ -12,6 +12,7 @@
     </category>
     <category label="Zaawansowane" >
         <setting id="verify_ssl" type="bool" label="Bezpieczne połączenie SSL" default="true" enable="true"/>
+        <setting id="partial_size" type="number" label="Wielkość porcji danych" default="1000" enable="true"/>
     </category>
 </settings>
 
