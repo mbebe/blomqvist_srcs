@@ -880,8 +880,6 @@ class PLAYERPL(object):
         Process list of VOD items.
         Check if playable or serial. Add items to Kodi list.
         """
-        with open('/tmp/kodi.json', 'w') as f:
-            json.dump(vod_list, f)
         for vod in vod_list:
             if subitem:
                 vod = vod[subitem]
@@ -930,7 +928,8 @@ class PLAYERPL(object):
             xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
             xbmcplugin.endOfDirectory(addon_handle)
         except:
-            # Kodi Favorites
+            raise  # skip fallback
+            # Falback: Kodi Favorites
             xbmc.executebuiltin("ActivateWindow(10134)")
 
     def listSearch(self, query):
