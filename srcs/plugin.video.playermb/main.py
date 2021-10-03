@@ -262,16 +262,16 @@ def deunicode_params(params):
         params = {encode(k): encode(v) for k, v in params.items()}
     return params
 
-def getRequests(url, data=None, headers=None, params=None):
+def getRequests(url, data=None, headers=None, params=None, verify=True):
     xbmc.log('PLAYER.PL: getRequests(%r, data=%r, headers=%r, params=%r)' % (url, data, headers, params), xbmc.LOGWARNING)
     params = deunicode_params(params)
     if data:
         if headers.get('Content-Type', '').startswith('application/json'):
-            content = sess.post(url, headers=headers, json=data, params=params)
+            content = sess.post(url, headers=headers, json=data, params=params, verify=verify)
         else:
-            content = sess.post(url, headers=headers, data=data, params=params)
+            content = sess.post(url, headers=headers, data=data, params=params, verify=verify)
     else:
-        content = sess.get(url, headers=headers, params=params)
+        content = sess.get(url, headers=headers, params=params, verify=verify)
     return content.json()
 
 
@@ -423,6 +423,7 @@ class PLAYERPL(object):
 
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
         self.skip_unaviable = addon.getSetting('avaliable_only').lower() == 'true'
+        self.verify_ssl = addon.getSetting('verify_ssl').lower() == 'true'
         # self.force_media_fanart = addon.getSetting('self.force_media_fanart').lower() == 'true'
         self.force_media_fanart = True
         self.force_media_fanart_width = 1280
@@ -560,7 +561,7 @@ class PLAYERPL(object):
         if not self.REFRESH_TOKEN and self.LOGGED == 'true':
             self.remove_mylist()
             POST_DATA = 'scope=/pub-api/user/me&client_id=Player_TV_Android_28d3dcc063672068'
-            data = getRequests(self.GETTOKEN, data = POST_DATA, headers=self.HEADERS3)
+            data = getRequests(self.GETTOKEN, data = POST_DATA, headers=self.HEADERS3, verify=self.verify_ssl)
             kod = data.get('code')
             dg = dialog_progress()
             dg.create('Uwaga','Przepisz kod: [B]%s[/B]\n Na stronie https://player.pl/zaloguj-tv'%kod)
@@ -577,7 +578,7 @@ class PLAYERPL(object):
                 if secs_left == 0: percent = 100
                 else: percent = increment * secs
                 POST_DATA = 'grant_type=tvn_reverse_onetime_code&code=%s&client_id=Player_TV_Android_28d3dcc063672068'%kod
-                data = getRequests(self.POSTTOKEN, data=POST_DATA, headers=self.HEADERS3)
+                data = getRequests(self.POSTTOKEN, data=POST_DATA, headers=self.HEADERS3, verify=self.verify_ssl)
                 token_type = data.get("token_type",None)
                 errory = data.get('error',None)
                 if token_type == 'bearer': break
@@ -607,7 +608,7 @@ class PLAYERPL(object):
             self.HEADERS2['Content-Type'] =  'application/json; charset=UTF-8'
 
             POST_DATA = {"agent":self.USAGENT,"agentVersion":self.USAGENTVER,"appVersion":"1.0.38(62)","maker":self.MAKER,"os":"Android","osVersion":"9","token":self.ACCESS_TOKEN,"uid":self.DEVICE_ID}
-            data = getRequests(self.SUBSCRIBER, data = POST_DATA, headers=self.HEADERS2,params=PARAMS)
+            data = getRequests(self.SUBSCRIBER, data = POST_DATA, headers=self.HEADERS2,params=PARAMS, verify=self.verify_ssl)
 
 
             self.SELECTED_PROFILE = data.get('profile',{}).get('name',None)
@@ -624,7 +625,7 @@ class PLAYERPL(object):
     def getTranslate(self,id_):
 
         PARAMS = {'4K': 'true','platform': PF, 'id': id_}
-        data = getRequests(self.TRANSLATE,headers = self.HEADERS2, params = PARAMS)
+        data = getRequests(self.TRANSLATE,headers=self.HEADERS2, params=PARAMS, verify=self.verify_ssl)
         return data
 
     def getPlaylist(self,id_):
@@ -647,7 +648,7 @@ class PLAYERPL(object):
         }
 
         urlk = 'https://player.pl/playerapi/product/%s/player/configuration' % id_
-        data = getRequests(urlk, headers=HEADERSz, params=self.params(type=rodzaj))
+        data = getRequests(urlk, headers=HEADERSz, params=self.params(type=rodzaj), verify=self.verify_ssl)
 
         try:
             vidsesid = data["videoSession"]["videoSessionId"]
@@ -657,13 +658,14 @@ class PLAYERPL(object):
             pass
 
         PARAMS = {'type': rodzaj, 'platform': PF}
-        data = getRequests(self.api_base+'item/%s/playlist' % id_, headers=HEADERSz, params=PARAMS)
+        data = getRequests(self.api_base+'item/%s/playlist' % id_, headers=HEADERSz, params=PARAMS,
+                           verify=self.verify_ssl)
 
         if not data:
 
             urlk = 'https://player.pl/playerapi/item/%s/playlist' % id_
             PARAMS = {'type': rodzaj, 'platform': UA, 'videoSessionId': vidsesid}
-            data = getRequests(urlk, headers=HEADERSz, PARAMS=PARAMS)
+            data = getRequests(urlk, headers=HEADERSz, PARAMS=PARAMS, verify=self.verify_ssl)
 
         xbmc.log('PLAYER.PL: getPlaylist(%r): data: %r' % (id_, data), xbmc.LOGWARNING)
         vid = data['movie']
@@ -689,7 +691,7 @@ class PLAYERPL(object):
 
     def refreshTokenTVN(self):
         POST_DATA = 'grant_type=refresh_token&refresh_token=%s&client_id=Player_TV_Android_28d3dcc063672068'%self.REFRESH_TOKEN
-        data = getRequests(self.POSTTOKEN,data = POST_DATA, headers=self.HEADERS3)
+        data = getRequests(self.POSTTOKEN,data = POST_DATA, headers=self.HEADERS3, verify=self.verify_ssl)
         if data.get('error_description') == 'Token is still valid.':
             return
         self.ACCESS_TOKEN = data.get('access_token')
@@ -898,7 +900,8 @@ class PLAYERPL(object):
     def listCollection(self):
         self.refreshTokenTVN()
         data = getRequests('https://player.pl/playerapi/product/section/list',
-                           headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'))
+                           headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'),
+                           verify=self.verify_ssl)
         mud = "listcollectContent"
         for vod in data:
             dod = ''
@@ -920,7 +923,7 @@ class PLAYERPL(object):
         self.refreshTokenTVN()
 
         data = getRequests('https://player.pl/playerapi/subscriber/bookmark',
-                           headers=self.HEADERS2, params=self.params(type='FAVOURITE'))
+                           headers=self.HEADERS2, params=self.params(type='FAVOURITE'), verify=self.verify_ssl)
         try:
             self.process_vod_list(data['items'], subitem='item')
             setView('tvshows')
@@ -937,7 +940,7 @@ class PLAYERPL(object):
         PARAMS = self.params(keyword=query)
 
         urlk = 'https://player.pl/playerapi/product/live/search'
-        lives = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
+        lives = getRequests(urlk, headers=self.HEADERS2, params=PARAMS, verify=self.verify_ssl)
         xbmc.log('PLAYER.PL: listSearch(%r): params=%r, lives=%r' % (query, PARAMS, lives), xbmc.LOGWARNING)
         lives = lives['items']
         # -- commented out, it does do nothing   (rysson)
@@ -945,7 +948,7 @@ class PLAYERPL(object):
         #     for live in lives:
         #         ac=''
         urlk = 'https://player.pl/playerapi/product/vod/search'
-        data = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
+        data = getRequests(urlk, headers=self.HEADERS2, params=PARAMS, verify=self.verify_ssl)
         self.process_vod_list(data['items'])
         # setView('tvshows')
         xbmcplugin.setContent(addon_handle, 'videos')
@@ -958,7 +961,7 @@ class PLAYERPL(object):
 
         urlk = 'https://player.pl/playerapi/product/vod/serial/%s/season/%s/episode/list' % (idmain, idsezon)
 
-        epizody = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
+        epizody = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS, verify=self.verify_ssl)
         for vod in epizody:
             vid = vod['id']
             meta = self.getMetaDane(vod)
@@ -983,7 +986,7 @@ class PLAYERPL(object):
         self.refreshTokenTVN()
         urlk = 'https://player.pl/playerapi/product/vod/serial/%s/season/list' % id
         out = []
-        sezony = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
+        sezony = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS, verify=self.verify_ssl)
         for sezon in sezony:
             seas=str(sezon['number'])
             urlid = '%s:%s'%(str(id),str(sezon['id']))
@@ -997,7 +1000,7 @@ class PLAYERPL(object):
     def listCategSerial(self, id):
         self.refreshTokenTVN()
         urlk = 'https://player.pl/playerapi/product/vod/serial/%s' % id
-        data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
+        data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS, verify=self.verify_ssl)
         meta = self.getMetaDane(data)
         typ = True
         if meta.sezon or meta.epizod:
@@ -1015,7 +1018,7 @@ class PLAYERPL(object):
         self.refreshTokenTVN()
         vid, slug = idslug.split(':')
         urlk = 'https://player.pl/playerapi/product/section/%s' % (vid)
-        data = getRequests(urlk, headers=self.HEADERS2, params=self.params(maxResults=True))
+        data = getRequests(urlk, headers=self.HEADERS2, params=self.params(maxResults=True), verify=self.verify_ssl)
         self.process_vod_list(data['items'])
         setView('movies')
         # xbmcplugin.setContent(int(sys.argv[1]), 'movies')
@@ -1037,7 +1040,7 @@ class PLAYERPL(object):
         self.refreshTokenTVN()
         urlk = 'https://player.pl/playerapi/product/live/list'
         out = []
-        data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
+        data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS, verify=self.verify_ssl)
         mylist = self.load_mylist()
 
         for dd in data:

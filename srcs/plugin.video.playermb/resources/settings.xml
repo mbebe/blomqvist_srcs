@@ -10,6 +10,9 @@
     <category label="Segregacja" >
         <setting id="avaliable_only" type="bool" label="Dostępne dla Ciebie" default="false" enable="true"/>
     </category>
+    <category label="Zaawansowane" >
+        <setting id="verify_ssl" type="bool" label="Bezpieczne połączenie SSL" default="true" enable="true"/>
+    </category>
 </settings>
 
 
