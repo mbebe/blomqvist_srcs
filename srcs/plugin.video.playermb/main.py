@@ -275,7 +275,7 @@ def getRequests(url, data=None, headers=None, params=None, verify=True):
     return content.json()
 
 
-def getRequests3(url, data=None, headers=None, params=None):
+def getRequests3(url, data=None, headers=None, params=None, verify=True):
     # urllib3 seems to be faster in some cases
     xbmc.log('PLAYER.PL: getRequests3(%r, data=%r, headers=%r, params=%r)' % (url, data, headers, params), xbmc.LOGWARNING)
     if params:
@@ -283,7 +283,10 @@ def getRequests3(url, data=None, headers=None, params=None):
         encoded_args = urlencode(params)
         url += '&' if '?' in url else '?'
         url += encoded_args
-    http = urllib3.PoolManager()
+    pool_kwargs = {}
+    if verify is False:
+        pool_kwargs['cert_reqs'] = 'CERT_NONE'
+    http = urllib3.PoolManager(**pool_kwargs)
     if data:
         if headers.get('Content-Type', '').startswith('application/json'):
             data = json.dumps(data).encode('utf-8')
@@ -782,7 +785,7 @@ class PLAYERPL(object):
         if plOnly:
             PARAMS['vodFilter[]'] = 'POLISH'
         urlk = self.PRODUCTVODLIST
-        data = getRequests3(urlk, headers=self.HEADERS2, params=PARAMS)
+        data = getRequests3(urlk, headers=self.HEADERS2, params=PARAMS, verify=self.verify_ssl)
         xbmc.log('PLAYER.PL: slug %s done' % idslug, xbmc.LOGWARNING)
         return data
 
@@ -794,7 +797,7 @@ class PLAYERPL(object):
     def get_mylist(self):
         xbmc.log('PLAYER.PL: mylist started', xbmc.LOGWARNING)
         data = getRequests3('https://player.pl/playerapi/subscriber/product/available/list?4K=true&platform=ANDROID_TV',
-                            headers=self.HEADERS2, params={})
+                            headers=self.HEADERS2, params={}, verify=self.verify_ssl)
         xbmc.log('PLAYER.PL: mylist done', xbmc.LOGWARNING)
         return set(data)
 
