@@ -476,7 +476,7 @@ class PLAYERPL(object):
         images = {}
         # See: https://kodi.wiki/view/Artwork_types
         # New art images must be added to MetaDane
-        for prop, (iname, uname) in {'foto': ('pc', 'mainUrl'),
+        for prop, (iname, uname) in {'foto': ('smart_tv', 'mainUrl'),
                                      'fanart': ('smart_tv', 'mainUrl'),
                                      'thumb': ('smart_tv', 'miniUrl'),
                                      'poster': ('vertical', 'mainUrl'),
