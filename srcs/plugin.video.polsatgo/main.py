@@ -21,9 +21,9 @@ except ImportError:
     import  cookielib
 
 try:
-    from urllib.parse import urlencode, quote_plus, quote
+    from urllib.parse import urlencode, quote_plus, quote, unquote
 except ImportError:
-    from urllib import urlencode, quote_plus, quote
+    from urllib import urlencode, quote_plus, quote, unquote
 
 import random
 import time
@@ -71,7 +71,11 @@ sexpir = addon.getSetting('sessexpir')
 skey = addon.getSetting('sesskey')
 
 
-
+sortowaniev = addon.getSetting('sortowanieV')
+if not sortowaniev:
+    addon.setSetting('sortowanieV','"12"')
+sortowanien = addon.getSetting('sortowanieN') if '12' not in sortowaniev else 'Ostatnio dodane'
+sortowanien = 'Ostatnio dodane' if '12' in sortowaniev else 'Alfabetycznie'
 
 
 def build_url(query):
@@ -80,8 +84,8 @@ def build_url(query):
 
 def add_item(url, name, image, folder, mode,  isPlayable=True, infoLabels=False, FANART=None, contextmenu=None, itemcount=1, page=0):
 
-    list_item = xbmcgui.ListItem(label=name)    
-        
+    list_item = xbmcgui.ListItem(label=name)
+
     if isPlayable:
         list_item.setProperty("IsPlayable", 'true')
         contextMenuItems = []
@@ -93,14 +97,14 @@ def add_item(url, name, image, folder, mode,  isPlayable=True, infoLabels=False,
 
     if not infoLabels:
         infoLabels={'title': name,'plot':name}
-    
+
     list_item.setInfo(type="video", infoLabels=infoLabels)
-    
+
     FANART = FANART if FANART else image
     list_item.setArt({'thumb': image, 'poster': image, 'banner': image, 'fanart': FANART})
     xbmcplugin.addDirectoryItem(
-        handle=addon_handle,    
-        url = build_url({'title':name,'mode': mode, 'url' : url, 'page' : page,'plot':infoLabels,'image':image}),    
+        handle=addon_handle,
+        url = build_url({'title':name,'mode': mode, 'url' : url, 'page' : page,'plot':infoLabels,'image':image}),
         listitem=list_item,
         isFolder=folder)
 
@@ -112,16 +116,16 @@ def PlayPolsat(stream_url,data):
     DRM = 'com.widevine.alpha'
     LICENSE_URL = 'https://b2c-www.redefine.pl/rpc/drm/'
     is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
-    
+
     UAcp=  'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.9 Safari/537.36'
-    
+
     dane=eval(opisy)
     if is_helper.check_inputstream():
         play_item = xbmcgui.ListItem(path=stream_url)#
         play_item.setInfo(type="Video", infoLabels={"title": dane['title'],'plot':dane['plot']})
-        
+
         play_item.setArt({'thumb': rys, 'poster': rys, 'banner': rys, 'fanart': FANART})
-        
+
         play_item.setMimeType('application/xml+dash')
         play_item.setContentLookup(False)
         if sys.version_info >= (3,0,0):
@@ -136,13 +140,12 @@ def PlayPolsat(stream_url,data):
         play_item.setProperty('inputstream.adaptive.stream_headers', 'Referer: %s'%(origin))
         play_item.setProperty('inputstream.adaptive.license_key',
                             LICENSE_URL + '|Content-Type=application%2Fjson&Referer=https://polsatgo.pl/&User-Agent=' + quote(UA) +
-                            '|'+data+'|JBlicense')        
+                            '|'+data+'|JBlicense')
 
-            
+
         play_item.setProperty('inputstream.adaptive.license_flags', "persistent_storage")
 
-    Player = xbmc.Player()
-    Player.play(stream_url, play_item)
+    xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
 
 def checkAccess(id):
     stoken = addon.getSetting('sesstoken')
@@ -155,10 +158,10 @@ def checkAccess(id):
         'Origin': 'https://go.cyfrowypolsat.pl',
         'Connection': 'keep-alive',
     }
-    
+
     dane =stoken+'|'+sexpir+'|navigation|getMedia'
     authdata=getHmac(dane)
-    
+
     data={"jsonrpc":"2.0","method":"getMedia","id":1,"params":{"cpid":1,"mediaId":id,"ua":"cpgo_www/2015","authData":{"sessionToken":authdata}}}
 
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
@@ -166,12 +169,12 @@ def checkAccess(id):
     prodid=prod['id']
     prodtype=prod['type']
     prodstype=prod['subType']
-    
+
     dane =stoken+'|'+sexpir+'|payments|checkProductsAccess'
     authdata=getHmac(dane)
-    
-    
-    
+
+
+
     data={"jsonrpc":"2.0","method":"checkProductsAccess","id":1,"params":{"products":[{"id":prodid,"type":prodtype,"subType":prodstype}],"ua":"cpgo_www/2015","authData":{"sessionToken":authdata}}}
     response = requests.post('https://b2c-www.redefine.pl/rpc/payments/', headers=headers, json=data,timeout=15, verify=False).json()
     dostep=response['result'][-1]['access']['statusDescription']
@@ -204,7 +207,7 @@ def playCPGO(id,cpid=0):
     }
 
     authdata=getHmac(dane)
-    
+
     data = {
             "id": 1,
             "jsonrpc": "2.0",
@@ -228,47 +231,47 @@ def playCPGO(id,cpid=0):
                     "sessionToken": authdata
                 },
                 "clientId": ""}}
-    
-    
+
+
     response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
     sesja=response['result']['session']
-    
+
     sesstoken=sesja['id']
     sessexpir=str(sesja['keyExpirationTime'])
     sesskey=sesja['key']
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
     addon.setSetting('sesstoken', sesstoken)
     addon.setSetting('sessexpir', str(sessexpir))
     addon.setSetting('sesskey', sesskey)
-    
-    
-    
+
+
+
     response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
     sesja=response['result']['session']
-    
+
     sesstoken=sesja['id']
     sessexpir=str(sesja['keyExpirationTime'])
     sesskey=sesja['key']
-    
+
     addon.setSetting('sesstoken', sesstoken)
     addon.setSetting('sessexpir', str(sessexpir))
     addon.setSetting('sesskey', sesskey)
-    
+
     stoken = addon.getSetting('sesstoken')
     sexpir = addon.getSetting('sessexpir')
 
     dane =stoken+'|'+sexpir+'|navigation|prePlayData'
     authdata=getHmac(dane)
 
-    data = {"jsonrpc":"2.0","id":1,"method":"prePlayData","params":{"ua":uapgwidevine,"userAgentData":{"deviceType":"pc","application":"firefox","os":"windows","build":2150100,"portal":"pg","player":"html","widevine":True},"cpid":cpid,"mediaId":id,"authData":{"sessionToken":authdata},"clientId":clid}}
+    data = {"jsonrpc":"2.0","id":1,"method":"prePlayData","params":{"ua":uapgwidevine,"userAgentData":{"deviceType":"pc","application":"firefox","os":"windows","build":2161400,"portal":"pg","player":"html","widevine":True},"cpid":cpid,"mediaId":id,"authData":{"sessionToken":authdata},"clientId":clid}}
 
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
     playback = response['result']['mediaItem']['playback']
@@ -282,8 +285,8 @@ def playCPGO(id,cpid=0):
         dane =stoken+'|'+sexpir+'|drm|getPseudoLicense'
         authdata=getHmac(dane)
         devcid=devid.replace('-','')
-        
-    
+
+
         data={"jsonrpc":"2.0","id":1,"method":"getPseudoLicense","params":{"ua":"cpgo_www_html5/2","cpid":1,"mediaId":mediaid,"sourceId":sourceid,"deviceId":{"type":"other","value":devcid},"authData":{"sessionToken":authdata}}}
         response = requests.post('https://b2c-www.redefine.pl/rpc/drm/', headers=headers, json=data,timeout=15, verify=False).json()
         str_url=response['result']['url']
@@ -292,28 +295,27 @@ def playCPGO(id,cpid=0):
     except:
 
         stream_url = mediaSources['url']
-        
+
         dane =stoken+'|'+sexpir+'|drm|getWidevineLicense'
         authdata=getHmac(dane)
         devcid=devid.replace('-','')
 
-        data=quote('{"jsonrpc":"2.0","id":1,"method":"getWidevineLicense","params":{"cpid":%d,"mediaId":"'%cpid+mediaid+'","sourceId":"'+sourceid+'","keyId":"'+keyid+'","object":"b{SSM}","deviceId":{"type":"other","value":"'+devid+'"},"ua":"pg_pc_windows_firefox_html/2150100","authData":{"sessionToken":"'+authdata+'"}}}')
+        data=quote('{"jsonrpc":"2.0","id":1,"method":"getWidevineLicense","params":{"userAgentData":{"deviceType":"pc","application":"firefox","os":"windows","build":2161400,"portal":"pg","player":"html","widevine":true},"cpid":%d,"mediaId":"'%cpid+mediaid+'","sourceId":"'+sourceid+'","keyId":"'+keyid+'","object":"b{SSM}","deviceId":{"type":"other","value":"'+devcid+'"},"ua":"pg_pc_windows_firefox_html/2161400","authData":{"sessionToken":"'+authdata+'"},"clientId":"'+clid+'"}}')
 
         PlayPolsat(stream_url,data)
     return
-        
+
 def PlayPolsatPseudo(str_url):
     dane=eval(opisy)
     play_item = xbmcgui.ListItem(path=str_url)#
     play_item.setInfo(type="Video", infoLabels={"title": dane['title'],'plot':dane['plot']})
-    
+
     play_item.setArt({'thumb': rys, 'poster': rys, 'banner': rys, 'fanart': FANART})
 
     play_item.setContentLookup(False)
     play_item.setProperty("IsPlayable", "true")
-    Player = xbmc.Player()
-    Player.play(str_url, play_item)
-    
+    xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
+
 def loginCPgo():
 
     headers = {
@@ -332,33 +334,37 @@ def loginCPgo():
 
     clid = addon.getSetting('clientId')
     devid = addon.getSetting('devid')
-    
+
     stoken = addon.getSetting('sesstoken')
     sexpir = addon.getSetting('sessexpir')
     skey = addon.getSetting('sesskey')
-    
+
     def gen_hex_code(myrange=6):
-        return ''.join([random.choice('0123456789ABCDEF') for x in range(myrange)])
-    
+        return ''.join([random.choice('0123456789abcdef') for x in range(myrange)])
+
     def ipla_system_id():
         myrand = gen_hex_code(10) + '-' + gen_hex_code(4) + '-' + gen_hex_code(4) + '-' + gen_hex_code(4) + '-' + gen_hex_code(12)
-    
         return myrand
+
+    def ipla_dev_id():
+        myrand = gen_hex_code(32) + '_'
+        return myrand
+
     if not clid and not devid:
-    
+
         clientid=ipla_system_id()
-        deviceid=ipla_system_id()
-        
+        deviceid=ipla_dev_id()
+
         addon.setSetting('clientId', clientid)
         addon.setSetting('devid', deviceid)
         return loginCPgo()
-        
+
     else:
 
         usernameCP = addon.getSetting('usernameCP')
-        passwordCP = addon.getSetting('passwordCP')    
+        passwordCP = addon.getSetting('passwordCP')
         if usernameCP and passwordCP:
-        
+
             data = {"id":1,"jsonrpc":"2.0","method":"login","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"clientId":"","authData":{"login":usernameCP,"password":passwordCP,"deviceId":{"type":"other","value":devid}}}}
 
             data = {
@@ -388,7 +394,7 @@ def loginCPgo():
                                 "type": "other",
                                 "value": devid}}}
                     }
-                            
+
 
             response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
             try:
@@ -409,17 +415,17 @@ def loginCPgo():
                 addon.setSetting('sesstoken', sesstoken)
                 addon.setSetting('sessexpir', str(sessexpir))
                 addon.setSetting('sesskey', sesskey)
-                
-                
-                
-                
-                
-                
-                
-                
+
+
+
+
+
+
+
+
                 dane =sesstoken+'|'+sessexpir+'|auth|getSession'
                 authdata=getHmac(dane)
-    
+
                 data = {
                         "id": 1,
                         "jsonrpc": "2.0",
@@ -451,32 +457,32 @@ def loginCPgo():
                 sesstoken=sesja['id']
                 sessexpir=str(sesja['keyExpirationTime'])
                 sesskey=sesja['key']
-                
-                
-                
-                
-                
-                
-                
-                
-                
+
+
+
+
+
+
+
+
+
                 addon.setSetting('sesstoken', sesstoken)
                 addon.setSetting('sessexpir', str(sessexpir))
                 addon.setSetting('sesskey', sesskey)
                 accesgroup = response['result']['accessGroups']
 
                 addon.setSetting('accgroups', str(accesgroup))
-                
+
                 dane =sesstoken+'|'+sessexpir+'|auth|getProfiles'
                 authdata=getHmac(dane)
                 data = {"id":1,"jsonrpc":"2.0","method":"getProfiles","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":""}}
                 response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
                 nids = []
                 for result in response['result']:
-                    nids.append({'id':result['id'],'nazwa':result["name"],'img':result["avatarId"]})    
+                    nids.append({'id':result['id'],'nazwa':result["name"],'img':result["avatarId"]})
                 if len(nids)>1:
                     profile = [x.get('nazwa') for x in nids]
-                    sel = xbmcgui.Dialog().select('Wybierz profil',profile)    
+                    sel = xbmcgui.Dialog().select('Wybierz profil',profile)
                     if sel>-1:
                         id = nids[sel].get('id')
                         nazwa = nids[sel].get('nazwa')
@@ -500,9 +506,9 @@ def loginCPgo():
                 response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
                 dane =sesstoken+'|'+sessexpir+'|auth|getSession'
                 authdata=getHmac(dane)
-    
+
                 data = {"id":1,"jsonrpc":"2.0","method":"getSession","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":""}}
-    
+
 
                 response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
                 sesja=response['result']['session']
@@ -510,19 +516,19 @@ def loginCPgo():
                 sesstoken=sesja['id']
                 sessexpir=str(sesja['keyExpirationTime'])
                 sesskey=sesja['key']
-                
 
-                
+
+
                 addon.setSetting('sesstoken', sesstoken)
                 addon.setSetting('sessexpir', str(sessexpir))
                 addon.setSetting('sesskey', sesskey)
                 accesgroup = response['result']['accessGroups']
 
                 addon.setSetting('accgroups', str(accesgroup))
-                
+
                 return True,profil
 
-    
+
         else:
             xbmcgui.Dialog().notification('[B]Logowanie[/B]', 'Błędne dane logowania.',xbmcgui.NOTIFICATION_INFO, 6000)
             return False,False
@@ -537,7 +543,7 @@ def home():
         add_item(name='Moja lista', url='', mode='mojalista', image=ikona, folder=True, isPlayable=False,FANART=FANART)
     else:
         add_item('', '[B]Zaloguj[/B]','DefaultAddonService.png',False,'settings',False,FANART=FANART)
-    xbmcplugin.endOfDirectory(addon_handle)    
+    xbmcplugin.endOfDirectory(addon_handle)
 
 def newtime(self,ff):
     ff=re.sub(':\d+Z','',ff)
@@ -547,7 +553,7 @@ def newtime(self,ff):
     dd=int(calendar.timegm(time.strptime(ff, '%Y-%m-%dT%H:%M')))
     format_date=datetime.datetime(*(time.localtime(dd)[0:6]))
 
-    return dd,format_date   
+    return dd,format_date
 
 def live():
     headers = {
@@ -572,33 +578,33 @@ def live():
     myperms = []
     ff = addon.getSetting('accgroups')
     lista=eval(ff)
-    
+
     for l in lista:
         if 'sc:' in l or 'loc:' in l:
             myperms.append(l)
 
     dane =stoken+'|'+sexpir+'|navigation|getLiveChannels'
     authdata=getHmac(dane)
-    
+
 
     data = {"id":1,"jsonrpc":"2.0","method":"getLiveChannels","params":{"filters":[],"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid}}
-    
+
 
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
     aa=response['result']['results']
     for i in aa:
         item = {}
-        
+
         channelperms = i['grantExpression'].split('+')
-        channelperms = [w.replace('+plat:all', '') for w in channelperms]    
+        channelperms = [w.replace('+plat:all', '') for w in channelperms]
 
         for j in myperms:
 
-            if j in channelperms or 'transmisja bezpłatna' in i['title']:
+            if j in channelperms or u'transmisja bezpłatna' in i['title']:
                 item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
                 item['id'] = i['id']
-    
-                z,data = newtime(i["publicationDate"]) 
+
+                z,data = newtime(i["publicationDate"])
                 item['title'] = '%s - %s'%(data,i['title'].upper().encode('utf-8'))
                 item['plot'] = i['category']['description'].encode('utf-8')
                 items.append(item)
@@ -615,12 +621,11 @@ def live():
     itemz= len(items)
     for item in items:
         opis=''
-        add_item(name=item.get('title'), url=item.get('id'), mode='playCPGO', image=item.get('img'), folder=False, isPlayable=False, infoLabels={'title':item.get('title'),'plot':opis}, itemcount=itemz,FANART=FANART)
+        add_item(name=item.get('title'), url=item.get('id'), mode='playCPGO', image=item.get('img'), folder=False, isPlayable=True, infoLabels={'title':item.get('title'),'plot':opis}, itemcount=itemz,FANART=FANART)
 
 
     xbmcplugin.endOfDirectory(addon_handle)
 
-    
 def tvmain():
     headers = {
         'Host': host,
@@ -644,32 +649,32 @@ def tvmain():
     myperms = []
     ff = addon.getSetting('accgroups')
     lista=eval(ff)
-    
+
     for l in lista:
         if 'sc:' in l or 'loc:' in l:
             myperms.append(l)
 
     dane =stoken+'|'+sexpir+'|navigation|getTvChannels'
     authdata=getHmac(dane)
-    
+
 
     data = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"filters":[],"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid}}
-    
+
 
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
     aa=response['result']['results']
     for i in aa:
         item = {}
-        
+
         channelperms = i['grantExpression'].split('+')
-        channelperms = [w.replace('+plat:all', '') for w in channelperms]    
+        channelperms = [w.replace('+plat:all', '') for w in channelperms]
 
         for j in myperms:
-            
+
             if j in channelperms or i['title']=='Polsat' or i['title']=='TV4':
                 item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
                 item['id'] = i['id']
-    
+
                 item['title'] = i['title'].upper().encode('utf-8')
                 item['plot'] = i['category']['description'].encode('utf-8')
                 items.append(item)
@@ -680,7 +685,7 @@ def tvmain():
         if not entry['id'] in dupes:
             filter.append(entry)
             dupes.append(entry['id'])
-    
+
     addon.setSetting('kanaly', str(dupes))
 
     dups=getEpgs()
@@ -691,12 +696,12 @@ def tvmain():
             opis=dups[0][item.get('id')]
         except:
             opis=''
-        add_item(name=item.get('title'), url=item.get('id'), mode='playCPGO', image=item.get('img'), folder=False, isPlayable=False, infoLabels={'title':item.get('title'),'plot':opis}, itemcount=itemz,FANART=FANART)
+        add_item(name=item.get('title'), url=item.get('id'), mode='playCPGO', image=item.get('img'), folder=False, isPlayable=True, infoLabels={'title':item.get('title'),'plot':opis}, itemcount=itemz,FANART=FANART)
 
 
     xbmcplugin.endOfDirectory(addon_handle)
 
-    
+
 def newtime(ff):
     from datetime import datetime
     ff=re.sub(':\d+Z','',ff)
@@ -710,7 +715,7 @@ def newtime(ff):
         dd='01'
         dzien='{:>02d}'.format(int(dzien)+1)
     ff=re.sub('(\d+)T(\d+)','%sT%s'%(dzien,int(dd)),ff)
-    
+
     import time
     try:
         format_date=datetime.strptime(ff, '%Y-%m-%dT%H:%M')
@@ -718,18 +723,18 @@ def newtime(ff):
         format_date=datetime(*(time.strptime(ff, '%Y-%m-%dT%H:%M')[0:6]))
     dd= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
 
-    return dd,format_date    
-    
+    return dd,format_date
+
 def getEpgs():
     kanaly = addon.getSetting('kanaly')
     kanaly=eval(kanaly)
-    
-    import datetime 
+
+    import datetime
     now = datetime.datetime.now()
     now2 = datetime.datetime.now()+ datetime.timedelta(days=1)
     aa1=now.strftime('%Y-%m-%dT%H:%M:%S') + ('.%03dZ' % (now.microsecond / 10000))
     aa=now2.strftime('%Y-%m-%dT%H:%M:%S') + ('.%03dZ' % (now.microsecond / 10000))
-    
+
     headers = {
         'Host': host,
         'User-Agent': UA,
@@ -742,20 +747,20 @@ def getEpgs():
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'cross-site',
     }
-    
+
     stoken = addon.getSetting('sesstoken')
     sexpir = addon.getSetting('sessexpir')
-    
+
     dane =stoken+'|'+sexpir+'|navigation|getChannelsProgram'
     authdata=getHmac(dane)
 
     data={"jsonrpc":"2.0","method":"getChannelsProgram","id":1,"params":{"channelIds":kanaly,"fromDate":aa1,"toDate":aa,"ua":uapg,"authData":{"sessionToken":authdata}}}
 
-    
+
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
 
     dupek=[]
-    import datetime 
+    import datetime
     now = datetime.datetime.now()
     ab=now.strftime('%Y-%m-%dT%H:%M:%SZ')
 
@@ -766,10 +771,10 @@ def getEpgs():
     except TypeError:
         format_date=datetime(*(time.strptime(ab, '%Y-%m-%dT%H:%M:%SZ')[0:6]))
     zz= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
-    
+
     items={}
     for kanal in kanaly:
-        
+
         el1=''
         if kanal in response['result']:
             dane=response['result'][kanal]
@@ -788,19 +793,19 @@ def getEpgs():
                         tyt2=dane[i]["genre"]
                         cc=re.sub(':\d+$','',str(format_date))
                         el1+='[COLOR khaki]'+cc+'[/COLOR] - '+tyt+' [COLOR violet]('+tyt2+')[/COLOR][CR]'
-                    
+
                 except:
                     pass
-                
+
         else:
             continue
         items[kanal]=el1
     dupek.append(items)
 
     return dupek
-    
-    
-    
+
+
+
 def vodmain():
     add_item(name='Szukaj', url='', mode='vodszukaj', image=RESOURCES+'search.png', folder=True, isPlayable=False,FANART=FANART)
 
@@ -811,7 +816,7 @@ def vodmain():
     add_item(name='PROGRAMY', url='5024073', mode='vodlist', image='https://redirector.redefine.pl/iplatv/menu_icon_programy.png', folder=True, isPlayable=False,FANART=FANART)
     xbmcplugin.endOfDirectory(addon_handle)
 
-    
+
 def vodSzukaj(query):
     headers = {
         'User-Agent': UA,
@@ -827,13 +832,13 @@ def vodSzukaj(query):
     }
     stoken = addon.getSetting('sesstoken')
     sexpir = addon.getSetting('sessexpir')
-    
+
     items = []
     myperms = []
-    
+
     ff = addon.getSetting('accgroups')
     lista=eval(ff)
-    
+
     for l in lista:
         if 'sc:' in l:
             myperms.append(l)
@@ -849,7 +854,7 @@ def vodSzukaj(query):
 
     data={"jsonrpc":"2.0","method":"searchContent","id":1,"params":{"query":query,"limit":50,"ua":uapg,"authData":{"sessionToken":authdata}}}
 
-    
+
     data={
             "id": 1,
             "jsonrpc": "2.0",
@@ -877,13 +882,12 @@ def vodSzukaj(query):
                 "clientId": clid
             }
         }
-    
+
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
-    
+
     mud='playVOD'
     folder=False
-    isplay=False
-    ss='0'
+    isplay=True
 
     try:
         aa = response['result']['results']
@@ -903,30 +907,33 @@ def vodSzukaj(query):
         otal = 0
 
     for i in aa:
+        ss='0';
         if 'keyCategoryId' in i:
-            #mud='vodlist'
-            #folder=True
-            #isplay=False
-            
+            mud='vodlist'
+            folder=True
+            isplay=False
+
             if i['keyCategoryId'] == i['id']:
                 ss='1'
 
         else:
             mud='playVOD'
             folder=False
-            isplay=False
+            isplay=True
+
 
         item = {}
         for j in myperms:
+            item["cpid"] = i['cpid']
             if i.get('thumbnails',None):
                 item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
             else:
                 item['img'] = None
 
-            item['id'] = str(i['id'])+'|ss' if (ss == '1' )  else str(i['id'])  
+            item['id'] = str(i['id'])+'|ss' if (ss == '1' )  else str(i['id'])
             if (mud == 'vodlist'):
-                item['id'] = item['id']+'|dod'                  
-        
+                item['id'] = item['id']+'|dod'
+
             try:
                 item['title'] = i['title'].upper().encode('utf-8')
             except:
@@ -942,23 +949,26 @@ def vodSzukaj(query):
             dupes.append(entry['id'])
     items = filter
     itemz= len(items)
-    
+
     for item in items:
         idc = item.get('id')
         if 'dod' in idc:
             mud='vodlist'
             folder=True
             isplay=False
-            
+
             #idc = idc.split('|')[0]+'|getSubCategories'
-            if 'ss' in idc:       
+            if 'ss' in idc:
                 idc = idc.split('|')[0]+'|getSubCategories'
             else:
                 idc = idc.split('|')[0]
         else:
-            mud = 'playVOD'
+            if item['cpid'] == 0:
+                mud = 'playCPGO'
+            else:
+                mud = 'playVOD'
             folder=False
-            isplay=False
+            isplay=True
 
 
         contextmenu = []
@@ -968,11 +978,10 @@ def vodSzukaj(query):
         else:
 
             contextmenu.append(('[B][COLOR lightgreen]Dodaj do MOJEJ LISTY[/B][/COLOR]', 'RunPlugin(plugin://plugin.video.polsatgo?mode=DodajUsun&url=%s)'%str(idc)))
-        
-        
-        add_item(name=item.get('title'), url=idc, mode=mud, image=item.get('img'), folder=folder, isPlayable=isplay, infoLabels=item, contextmenu=contextmenu, itemcount=itemz,FANART=FANART)    
-    xbmcplugin.endOfDirectory(addon_handle)    
-    
+
+        add_item(name=item.get('title'), url=idc, mode=mud, image=item.get('img'), folder=folder, isPlayable=isplay, infoLabels={'title':item.get('title'),'plot':item.get('plot')}, contextmenu=contextmenu, itemcount=itemz,FANART=FANART)
+    xbmcplugin.endOfDirectory(addon_handle)
+
 def MojaLista():
     headers = {
         'Host': host,
@@ -986,7 +995,7 @@ def MojaLista():
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'cross-site',
     }
-    
+
     stoken = addon.getSetting('sesstoken')
     sexpir = addon.getSetting('sessexpir')
     dane =stoken+'|'+sexpir+'|navigation|getFavoritesWithFlatNavigation'
@@ -994,7 +1003,7 @@ def MojaLista():
     data = {"id":1,"jsonrpc":"2.0","method":"getFavoritesWithFlatNavigation","params":{"offset":0,"limit":50,"filters":[],"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid}}
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
     results = response.get('result',None).get('results',None)
-    
+
     for r in results:
         object = r.get('object',None)
         try:
@@ -1012,18 +1021,37 @@ def MojaLista():
             mud = 'vodlist'
             folder = True
             isplay = False
+            id = id+'|getSubCategories'
             contextmenu.append(('[B][COLOR red]Usuń z MOJEJ LISTY[/B][/COLOR]', 'RunPlugin(plugin://plugin.video.polsatgo?mode=Usun&url=category_%s)'%str(id)))
         else:
             mud = 'playVOD'
             folder=False
             isplay=False
             contextmenu.append(('[B][COLOR red]Usuń z MOJEJ LISTY[/B][/COLOR]', 'RunPlugin(plugin://plugin.video.polsatgo?mode=Usun&url=vod_%s)'%str(id)))
-        add_item(name=tyt, url=id, mode=mud, image=imag, folder=folder, isPlayable=isplay, infoLabels={"title": tyt,'plot':description}, contextmenu=contextmenu,FANART=FANART)    
+        add_item(name=tyt, url=id, mode=mud, image=imag, folder=folder, isPlayable=isplay, infoLabels={"title": tyt,'plot':description}, contextmenu=contextmenu,FANART=FANART)
     xbmcplugin.endOfDirectory(addon_handle)
-        
-    
+
+
 def vodList(id):
-    
+
+#5024024 seriale
+#5024074 sport
+#5024058 filmy
+#5024073 programy
+
+    idss = ['5024024','5024074','5024058','5024073']
+    if id in idss:
+        add_item(url="s|"+id,name='Wyświetl materiały', image=ikona, mode='vodlist',folder=True, isPlayable=False, infoLabels=None, contextmenu=None,FANART=FANART)
+        add_item(url=None,name='-    [COLOR lime]Sortowanie:[/COLOR] [B]'+sortowanien+'[/B]',image=ikona,mode='sortowanie',folder=True,isPlayable=False, infoLabels=None, contextmenu=None,FANART=FANART)
+        xbmcplugin.endOfDirectory(addon_handle)
+        return
+
+
+    id__ = id.split('|')[0]
+    if id__ == "s":
+        id = id.split('|')[1]
+
+
     headers = {
         'Host': host,
         'User-Agent': UA,
@@ -1036,7 +1064,7 @@ def vodList(id):
         'Sec-Fetch-Mode': 'cors',
         'Sec-Fetch-Site': 'cross-site',
     }
-    
+
     stoken = addon.getSetting('sesstoken')
     sexpir = addon.getSetting('sessexpir')
 
@@ -1044,7 +1072,7 @@ def vodList(id):
     myperms = []
     ff = addon.getSetting('accgroups')
     lista=eval(ff)
-    
+
     for l in lista:
         if 'sc:' in l:
             myperms.append(l)
@@ -1052,14 +1080,14 @@ def vodList(id):
             myperms.append(l)
         if 'loc:' in l:
             myperms.append(l)
-    
+
     if 'getSubCategories' in id:
         id = id.split('|')[0]
         dane =stoken+'|'+sexpir+'|navigation|getSubCategories'
         authdata=getHmac(dane)
-        
+
         data = {"id":1,"jsonrpc":"2.0","method":"getSubCategories","params":{"catid":int(id),"filters":[],"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":""}}
-        
+
     else:
         dane =stoken+'|'+sexpir+'|navigation|getCategoryContentWithFlatNavigation'
         authdata=getHmac(dane)
@@ -1068,20 +1096,24 @@ def vodList(id):
             idc = int(id)
         except:
             idc = id
-        data = {"id":1,"jsonrpc":"2.0","method":"getCategoryContentWithFlatNavigation","params":{"catid":idc,"offset":int(offse),"limit":50,"filters":[],"collection":{"type":"sortedby","name":"Alfabetycznie","default":True,"value":"13"},"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":""}}
-    
+        data = {"id":1,"jsonrpc":"2.0","method":"getCategoryContentWithFlatNavigation","params":{"catid":idc,"offset":int(offse),"limit":50,"filters":[],"collection":{"type":"sortedby","name":eval(sortowaniev),"default":True,"value":eval(sortowaniev)},"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":""}}
+
 
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
 
     mud='playVOD'
     folder=False
-    isplay=False
+    isplay=True
+
 
     try:
-    
+
         aa = response['result']['results']
     except:
         aa = response['result']
+    if not aa:
+        return vodList(id)
+
     if 'keyCategoryId' in aa[0]:
         mud='vodlist'
         folder=True
@@ -1092,6 +1124,11 @@ def vodList(id):
         otal = 0
 
     for i in aa:
+        ss='0'
+        if 'keyCategoryId' in i:
+            if i['keyCategoryId'] == i['id']:
+                ss='1'
+
         item = {}
 
         for j in myperms:
@@ -1100,7 +1137,11 @@ def vodList(id):
                 item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
             else:
                 item['img'] = None
-            item['id'] = i['id']
+
+            item['id'] = str(i['id'])+'|ss' if (ss == '1' )  else str(i['id'])
+            if (mud == 'vodlist'):
+                item['id'] = item['id']+'|dod'
+
             try:
                 item['title'] = i['title'].upper().encode('utf-8')
             except:
@@ -1120,8 +1161,21 @@ def vodList(id):
 
     for item in items:
 
-        getid = item.get('id')
+        getid = str(item.get('id'))
 
+        if 'dod' in getid:
+            mud='vodlist'
+            folder=True
+            isplay=False
+
+            if 'ss' in getid:
+                getid = getid.split('|')[0]+'|getSubCategories'
+            else:
+                getid = getid.split('|')[0]
+        else:
+            mud = 'playVOD'
+            folder=False
+            isplay=True
 
         contextmenu = []
         if mud =='playVOD':
@@ -1130,19 +1184,19 @@ def vodList(id):
         else:
 
             contextmenu.append(('[B][COLOR lightgreen]Dodaj do MOJEJ LISTY[/B][/COLOR]', 'RunPlugin(plugin://plugin.video.polsatgo?mode=DodajUsun&url=%s)'%str(getid)))
-        
+
         add_item(name=item.get('title'), url=getid, mode=mud, image=item.get('img'), folder=folder, isPlayable=isplay, infoLabels={'plot':item.get('plot'),"title": item.get('title')}, contextmenu=contextmenu    , itemcount=itemz,FANART=FANART)
-    
+
     if int(offse)+50<otal:
-        add_item(name='Następna strona', url=id, mode='vodlist', image=RESOURCES+'nextpage.png', folder=True, isPlayable=False, infoLabels=None, contextmenu=None, itemcount=itemz,page=int(offse)+50,FANART=FANART)    
+        add_item(name='Następna strona', url="s|"+id, mode='vodlist', image=RESOURCES+'nextpage.png', folder=True, isPlayable=False, infoLabels=None, contextmenu=None, itemcount=itemz,page=int(offse)+50,FANART=FANART)
 
     xbmcplugin.endOfDirectory(addon_handle)
-    
-    
+
+
 def getHmac(dane):
     skey = addon.getSetting('sesskey')
     import hmac
-    import hashlib 
+    import hashlib
     import binascii
     import base64
     from hashlib import sha256
@@ -1166,7 +1220,7 @@ def getHmac(dane):
                 s += b'='
             return base64.b64decode(s)
     secretAccessKey = base64_decode(skey.replace('-','+').replace('_','/'))
-    
+
     auth = hmac.new(secretAccessKey, ssdalej.encode("ascii"), sha256)
     vv= base64.b64encode(bytes(auth.digest())).decode("ascii")
 
@@ -1195,23 +1249,23 @@ def Usun(id):
 
     dane =stoken+'|'+sexpir+'|user_content|deleteFromFavorites'
     authdata=getHmac(dane)
-    
-    
-    
-    
+
+
+
+
     data = {"id":1,"jsonrpc":"2.0","method":"deleteFromFavorites","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid,"favorite":typ}}
 
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
     response = requests.post(user_url, headers=headers, json=data,timeout=15, verify=False).json()
-    xbmcgui.Dialog().notification('[B]Info[/B]', 'Usunięto z MOJEJ LISTY' ,xbmcgui.NOTIFICATION_INFO, 6000)        
+    xbmcgui.Dialog().notification('[B]Info[/B]', 'Usunięto z MOJEJ LISTY' ,xbmcgui.NOTIFICATION_INFO, 6000)
     xbmc.executebuiltin("Container.Update({0}?mode=mojalista,replace)".format(sys.argv[0]))
-    
+
 def dodajusun(id):
 
     kateg = 'category'
@@ -1235,19 +1289,19 @@ def dodajusun(id):
 
     dane =stoken+'|'+sexpir+'|user_content|addToFavorites'
     authdata=getHmac(dane)
-    
-    
-    
-    
+
+
+
+
     data = {"id":1,"jsonrpc":"2.0","method":"addToFavorites","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid,"favorite":typ}}
 
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
     response = requests.post(user_url, headers=headers, json=data,timeout=15, verify=False).json()
     dane =stoken+'|'+sexpir+'|navigation|getFavoritesWithFlatNavigation'
     authdata=getHmac(dane)
@@ -1261,37 +1315,79 @@ def dodajusun(id):
             break
         else:
             continue
-    xbmcgui.Dialog().notification('[B]Info[/B]', komunikat,xbmcgui.NOTIFICATION_INFO, 6000)        
+    xbmcgui.Dialog().notification('[B]Info[/B]', komunikat,xbmcgui.NOTIFICATION_INFO, 6000)
 
-    
+
     return
 
-    
+
+def PLchar(char):
+    if type(char) is not str:
+        char=char.encode('utf-8')
+    char = char.replace('\\u0105','\xc4\x85').replace('\\u0104','\xc4\x84')
+    char = char.replace('\\u0107','\xc4\x87').replace('\\u0106','\xc4\x86')
+    char = char.replace('\\u0119','\xc4\x99').replace('\\u0118','\xc4\x98')
+    char = char.replace('\\u0142','\xc5\x82').replace('\\u0141','\xc5\x81')
+    char = char.replace('\\u0144','\xc5\x84').replace('\\u0144','\xc5\x83')
+    char = char.replace('\\u00f3','\xc3\xb3').replace('\\u00d3','\xc3\x93')
+    char = char.replace('\\u015b','\xc5\x9b').replace('\\u015a','\xc5\x9a')
+    char = char.replace('\\u017a','\xc5\xba').replace('\\u0179','\xc5\xb9')
+    char = char.replace('\\u017c','\xc5\xbc').replace('\\u017b','\xc5\xbb')
+    char = char.replace('&#8217;',"'")
+    char = char.replace('&#8211;',"-")
+    char = char.replace('&#8230;',"...")
+    char = char.replace('&#8222;','"').replace('&#8221;','"')
+    char = char.replace('[&hellip;]',"...")
+    char = char.replace('&#038;',"&")
+    char = char.replace('&#039;',"'")
+    char = char.replace('&quot;','"')
+    char = char.replace('&nbsp;',".").replace('&amp;','&')
+    return char
+
+
 def router(paramstring):
     args = dict(urlparse.parse_qsl(paramstring))
-    
+
     if args:
         mode = args.get('mode', None)
 
         if mode == 'playCPGO':
             playCPGO(exlink)
         elif mode == 'live':
-            live()    
+            live()
         elif mode == 'tvcpgo':
-            tvmain()    
+            tvmain()
         elif mode == 'vodmain':
             vodmain()
         elif mode == 'vodlist':
             vodList(exlink)
-        
+
         elif mode == 'playVOD':
             playVOD(exlink)
-        
+        elif mode == 'ListVODsubCateg':
+            ListVODsubCateg (exlink)
+        elif 'sortowanie' == mode:
+
+            label =["Ostatnio dodane","Alfabetycznie"]
+            value =["12","13"]
+
+            msg = 'Sposób sortowania'
+
+            sel = xbmcgui.Dialog().select('Wybierz '+msg,label)
+
+            sel = sel if sel>-1 else quit()
+
+            v = '"%s"'%(value[sel])
+            n = '%s'%(label[sel])
+
+            addon.setSetting(mode+'V',v)
+            addon.setSetting(mode+'N',n)
+            xbmc.executebuiltin("Container.Refresh")
         elif mode == 'vodszukaj':
             query = xbmcgui.Dialog().input(u'Szukaj, Podaj tytuł...', type=xbmcgui.INPUT_ALPHANUM)
-            if query:          
+            if query:
                 vodSzukaj(query)
-            
+
         elif mode == 'settings':
             addon.openSettings()
             xbmc.executebuiltin('Container.Refresh()')
@@ -1301,10 +1397,10 @@ def router(paramstring):
             Usun(exlink)
         elif mode == 'mojalista':
             MojaLista()
-            
+
     else:
-        home()     
-        
-        
+        home()
+
+
 if __name__ == '__main__':
     router(sys.argv[2][1:])
