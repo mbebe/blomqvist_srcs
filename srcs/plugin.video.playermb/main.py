@@ -57,7 +57,9 @@ else:
 
 from threading import Thread
 import requests
+from requests.exceptions import SSLError
 import urllib3  # already used by "requests"
+from urllib3.exceptions import MaxRetryError, SSLError as SSLError3
 from certifi import where
 import xbmcgui
 import xbmcplugin
@@ -155,10 +157,56 @@ sess = requests.Session()
 sess.cookies = cookielib.LWPCookieJar(COOKIEFILE)
 
 
-class goptions(object):
-    """Global options. Values are direclty in class."""
-    verify_ssl = True
-    use_urllib3 = True
+def get_bool(key):
+    return addon.getSetting(key).lower() == 'true'
+
+
+def set_bool(key, value):
+    return addon.setSetting(key, 'true' if value else 'false')
+
+
+# URL to test: https://wrong.host.badssl.com
+class GlobalOptions(object):
+    """Global options."""
+
+    def __init__(self):
+        self._session_level = 0
+        self.verify_ssl = get_bool('verify_ssl')
+        self.use_urllib3 = get_bool('use_urllib3')
+        self.ssl_dialog_launched = get_bool('ssl_dialog_launched')
+
+    def ssl_dialog(self, using_urllib3=False):
+        if self.ssl_dialog_launched and self._session_level == 0:
+            return
+        using_urllib3 = bool(using_urllib3)
+        options = [u'Wyłącz weryfikację SSL', u'Bez zmian']
+        if using_urllib3:
+            options.insert(0, u'Użyj wolniejszego połączenia (zalecane)')
+        num = xbmcgui.Dialog().select(u'Problem z połączeniem SSL, co teraz?', options)
+        if using_urllib3:
+            # getRequests3() error
+            if num == 0:  # Użyj wolniejszego połączenia
+                self.use_urllib3 = False
+            elif num == 1:  # Wyłącz weryfikację SSL
+                self.verify_ssl = False
+        else:
+            # getRequests() error
+            if num == 0:  # Wyłącz weryfikację SSL
+                self.verify_ssl = False
+        set_bool('use_urllib3', self.use_urllib3)
+        set_bool('verify_ssl', self.verify_ssl)
+        set_bool('ssl_dialog_launched', True)
+        self.ssl_dialog_launched = True
+
+    def __enter__(self):
+        self._session_level += 1
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._session_level -= 1
+
+
+goptions = GlobalOptions()
 
 
 def media(name, fallback=None):
@@ -271,7 +319,7 @@ def deunicode_params(params):
     return params
 
 
-def getRequests(url, data=None, headers=None, params=None):
+def _getRequests(url, data=None, headers=None, params=None):
     xbmc.log('PLAYER.PL: getRequests(%r, data=%r, headers=%r, params=%r)'
              % (url, data, headers, params), xbmc.LOGWARNING)
     params = deunicode_params(params)
@@ -285,11 +333,7 @@ def getRequests(url, data=None, headers=None, params=None):
     return content.json()
 
 
-def getRequests3(url, data=None, headers=None, params=None):
-    if not goptions.use_urllib3:
-        # force use requests
-        return getRequests(url, data=data, headers=headers, params=params)
-
+def _getRequests3(url, data=None, headers=None, params=None):
     # urllib3 seems to be faster in some cases
     xbmc.log('PLAYER.PL: getRequests3(%r, data=%r, headers=%r, params=%r)'
              % (url, data, headers, params), xbmc.LOGWARNING)
@@ -312,6 +356,30 @@ def getRequests3(url, data=None, headers=None, params=None):
         resp = http.request('GET', url, headers=headers)
     text = resp.data.decode('utf-8')
     return json.loads(text)
+
+
+def getRequests(url, data=None, headers=None, params=None):
+    try:
+        return _getRequests(url, data=data, headers=headers, params=params)
+    except SSLError:
+        goptions.ssl_dialog()
+    return _getRequests(url, data=data, headers=headers, params=params)
+
+
+def getRequests3(url, data=None, headers=None, params=None):
+    if not goptions.use_urllib3:
+        # force use requests
+        return getRequests(url, data=data, headers=headers, params=params)
+    try:
+        return _getRequests3(url, data=data, headers=headers, params=params)
+    except MaxRetryError as exc:
+        if not isinstance(exc.reason, SSLError3):
+            raise
+        with goptions:
+            goptions.ssl_dialog(using_urllib3=True)
+            if not goptions.use_urllib3:
+                return getRequests(url, data=data, headers=headers, params=params)
+    return _getRequests3(url, data=data, headers=headers, params=params)
 
 
 class ThreadCall(Thread):
@@ -442,11 +510,9 @@ class PLAYERPL(object):
         self.update_headers2()
 
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
-        self.skip_unaviable = addon.getSetting('avaliable_only').lower() == 'true'
-        goptions.verify_ssl = addon.getSetting('verify_ssl').lower() == 'true'
-        goptions.use_urllib3 = addon.getSetting('use_urllib3').lower() == 'true'
+        self.skip_unaviable = get_bool('avaliable_only')
         self.partial_size = int(addon.getSetting('partial_size') or 1000)
-        # self.force_media_fanart = addon.getSetting('self.force_media_fanart').lower() == 'true'
+        # self.force_media_fanart = get_bool('self.force_media_fanart')
         self.force_media_fanart = True
         self.force_media_fanart_width = 1280
         self.force_media_fanart_quality = 85
