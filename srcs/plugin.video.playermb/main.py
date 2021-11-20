@@ -72,8 +72,8 @@ from resources.lib.udata import AddonUserData
 # from resources.lib.tools import U, uclean, NN, fragdict
 
 
-MetaDane = namedtuple('MetaDane', 'tytul opis foto sezon epizod fanart thumb landscape poster')
-MetaDane.__new__.__defaults__ = 4*(None,)
+MetaDane = namedtuple('MetaDane', 'tytul opis foto sezon epizod fanart thumb landscape poster allowed')
+MetaDane.__new__.__defaults__ = 5*(None,)
 MetaDane.art = property(lambda self: {k: v for k in 'fanart thumb landscape poster'.split()
                                       for v in (getattr(self, k),) if v})
 
@@ -511,11 +511,14 @@ class PLAYERPL(object):
 
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
         self.skip_unaviable = get_bool('avaliable_only')
+        self.fix_api = get_bool('fix_api')
+        self.remove_duplicates = get_bool('remove_duplicates')
         self.partial_size = int(addon.getSetting('partial_size') or 1000)
         # self.force_media_fanart = get_bool('self.force_media_fanart')
         self.force_media_fanart = True
         self.force_media_fanart_width = 1280
         self.force_media_fanart_quality = 85
+        self._precessed_vid_list = set()
 
     def params(self, maxResults=False, **kwargs):
         """
@@ -587,7 +590,11 @@ class PLAYERPL(object):
             images['fanart'] = '%s?%s' % (iurl, urlencode(iparams))
         sezon = bool(data.get('showSeasonNumber')) or data.get('type') == 'SERIAL'
         epizod = bool(data.get("showEpisodeNumber"))
-        return MetaDane(tytul, opis, sezon=sezon, epizod=epizod, **images)
+        if self.fix_api:
+            allowed = data['id'] in self.mylist or data.get("ncPlus") is False
+        else:
+            allowed = data['id'] in self.mylist
+        return MetaDane(tytul, opis, sezon=sezon, epizod=epizod, allowed=allowed, **images)
 
     def createDatas(self):
 
@@ -941,14 +948,19 @@ class PLAYERPL(object):
         if `isPlayable` is None (default) it's forced to `not folder`,
         because folder is not playable.
         """
-        if vid in self.mylist or not self.skip_unaviable:
-            no_acccess = not (mud or '').strip()
-            if no_acccess:
+        if vid in self._precessed_vid_list:
+            xbmc.log('PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGWARNING)
+            if self.remove_duplicates:
+                return
+        allowed = vid in self.mylist or (meta and meta.allowed is True)
+        if allowed or not self.skip_unaviable:
+            no_playable = not (mud or '').strip() or meta.sezon
+            if no_playable:
                 isPlayable = False
                 folder = True
             elif isPlayable is None:
                 isPlayable = not folder
-            if suffix is None and no_acccess:
+            if suffix is None and no_playable and not allowed:
                 # auto suffix for non-playable video
                 suffix = ' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
             suffix = suffix or ''
@@ -962,6 +974,7 @@ class PLAYERPL(object):
             }
             add_item(str(vid), PLchar(meta.tytul) + suffix, meta.foto or ADDON_ICON, mud,
                      folder=folder, isPlayable=isPlayable, infoLabels=info, art=meta.art)
+            self._precessed_vid_list.add(vid)
 
     def process_vod_list(self, vod_list, subitem=None):
         """
@@ -974,7 +987,7 @@ class PLAYERPL(object):
             vid = vod['id']
             meta = self.getMetaDane(vod)
             mud, fold = ' ', None
-            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus"):
+            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus") or meta.allowed is True:
                 if vod['type'] == 'SERIAL':
                     mud = 'listcategSerial'
                     fold = True
@@ -1217,14 +1230,13 @@ if __name__ == '__main__':
     elif mode == "listcateg":
         PLAYERPL().listCateg(exlink)
 
-
-    elif mode == "listcategContent"    :
+    elif mode == "listcategContent":
         PLAYERPL().listCategContent(exlink)
 
-    elif mode == "listcategSerial"    :
-        PLAYERPL().listCategSerial    (exlink)
-    elif mode == "listEpizody"    :
-        PLAYERPL().listEpizody    (exlink)
+    elif mode == "listcategSerial":
+        PLAYERPL().listCategSerial(exlink)
+    elif mode == "listEpizody":
+        PLAYERPL().listEpizody(exlink)
 
     elif mode == 'search.it':
         query = exlink
