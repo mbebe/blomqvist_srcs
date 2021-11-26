@@ -553,7 +553,7 @@ class PLAYERPL(object):
             'API-ProfileUid': self.SELECTED_PROFILE_ID,
         }
 
-    def getMetaDane(self, data):
+    def get_meta_data(self, data):
         if not data.get('active', True):
             return '', '', '', None, None
         tytul = data['title']
@@ -590,10 +590,7 @@ class PLAYERPL(object):
             images['fanart'] = '%s?%s' % (iurl, urlencode(iparams))
         sezon = bool(data.get('showSeasonNumber')) or data.get('type') == 'SERIAL'
         epizod = bool(data.get("showEpisodeNumber"))
-        if self.fix_api:
-            allowed = data['id'] in self.mylist or data.get("ncPlus") is False
-        else:
-            allowed = data['id'] in self.mylist
+        allowed = self.is_allowed(data)
         return MetaDane(tytul, opis, sezon=sezon, epizod=epizod, allowed=allowed, **images)
 
     def createDatas(self):
@@ -942,7 +939,15 @@ class PLAYERPL(object):
     def mylist(self):
         self.remove_mylist()
 
-    def add_media_item(self, mud, vid, meta, suffix=None, folder=False, isPlayable=None):
+    def is_allowed(self, vod):
+        """Check if item (video, folder) is avaliable in current pay plan."""
+        return (
+            # not have to pay and not on ncPlus, it's means free
+            not (vod.get('payable') or vod.get('ncPlus'))
+            # or it's on myslit, it's means it is in pay plan
+            or vod.get('id') in self.mylist)
+
+    def add_media_item(self, mud, vid, meta=None, suffix=None, folder=False, isPlayable=None, vod=None):
         """
         Add default media item to xbmc.list.
         if `isPlayable` is None (default) it's forced to `not folder`,
@@ -952,7 +957,9 @@ class PLAYERPL(object):
             xbmc.log('PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGWARNING)
             if self.remove_duplicates:
                 return
-        allowed = vid in self.mylist or (meta and meta.allowed is True)
+        if meta is None and vod is not None:
+            meta = self.get_meta_data(vod)
+        allowed = (meta and meta.allowed is True) or vid in self.mylist
         if allowed or not self.skip_unaviable:
             no_playable = not (mud or '').strip() or meta.sezon
             if no_playable:
@@ -960,9 +967,14 @@ class PLAYERPL(object):
                 folder = True
             elif isPlayable is None:
                 isPlayable = not folder
-            if suffix is None and no_playable and not allowed:
-                # auto suffix for non-playable video
-                suffix = ' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
+            if suffix is None:
+                suffix = ''
+                if no_playable and not allowed:
+                    # auto suffix for non-playable video
+                    suffix += ' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
+                sched = vod and vod.get('displaySchedules')
+                if sched and sched[0].get('type') == 'SOON':
+                    suffix += ' [COLOR gray] [LIGHT] (od %s)[/LIGHT][/COLOR]' % sched[0]['till'][:-3]
             suffix = suffix or ''
             descr = PLchar(meta.opis or meta.tytul) + '\n' + suffix
             info = {
@@ -985,16 +997,16 @@ class PLAYERPL(object):
             if subitem:
                 vod = vod[subitem]
             vid = vod['id']
-            meta = self.getMetaDane(vod)
+            meta = self.get_meta_data(vod)
             mud, fold = ' ', None
-            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus") or meta.allowed is True:
+            if meta.allowed is True:
                 if vod['type'] == 'SERIAL':
                     mud = 'listcategSerial'
                     fold = True
                 else:
                     mud = 'playvid'
                     fold = False
-            self.add_media_item(mud, vid, meta, folder=fold)
+            self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
 
     def listCollection(self):
         self.refreshTokenTVN()
@@ -1005,7 +1017,7 @@ class PLAYERPL(object):
             dod = ''
             vid = vod['id']
             slug = vod['slug']
-            meta = self.getMetaDane(vod)
+            meta = self.get_meta_data(vod)
             info = {
                 'title': PLchar(meta.tytul) + dod,
                 'plot': PLchar(meta.opis or meta.tytul) + '\n' + dod
@@ -1062,19 +1074,18 @@ class PLAYERPL(object):
         epizody = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
         for vod in epizody:
             vid = vod['id']
-            meta = self.getMetaDane(vod)
+            meta = self.get_meta_data(vod)
             epiz = vod["episode"]
             sez = (vod["season"]["number"])
             tyt = PLchar((vod["season"]["serial"]["title"]))
             if 'fakty-' in vod.get('shareUrl', ''):
-                tytul = '%s - %s' % (tyt, PLchar(vod['title']))
+                tytul = '%s – %s' % (tyt, PLchar(vod['title']))
             else:
-                tytul = '%s - S%02dE%02d' % (tyt, sez, epiz)
-            mud = ' '
-            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus"):
-                mud = 'playvid'
+                tytul = '%s – S%02dE%02d' % (tyt, sez, epiz)
+            if vod.get('title'):
+                tytul += ' – %s' % vod['title'].strip()
             meta = meta._replace(tytul=tytul)
-            self.add_media_item(mud, vid, meta, folder=False)
+            self.add_media_item('playvid', vid, meta, folder=False, vod=vod)
         setView('episodes')
         # xbmcplugin.setContent(addon_handle, 'episodes')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
@@ -1099,7 +1110,7 @@ class PLAYERPL(object):
         self.refreshTokenTVN()
         urlk = 'https://player.pl/playerapi/product/vod/serial/%s' % id
         data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
-        meta = self.getMetaDane(data)
+        meta = self.get_meta_data(data)
         typ = True
         if meta.sezon or meta.epizod:
             if not meta.sezon:
@@ -1139,28 +1150,18 @@ class PLAYERPL(object):
         urlk = 'https://player.pl/playerapi/product/live/list'
         out = []
         data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
-        mylist = self.load_mylist()
-
         for dd in data:
-            id_=dd['id']
-            tyt=dd['title']
+            vid = dd['id']
+            tyt = PLchar(dd['title'])
             foto = dd['images']['pc'][0]['mainUrl']
             foto = 'https:' + foto if foto.startswith('//') else foto
-            # urlid = '%s:%s'%(id_,'kanal')  # mbebe
-            urlid = id_  # kszaq
-            try:
-                opis = dd['lead']
-            except:
-                opis=''
-            dod=''
-            if dd["payable"]:
-                if dd['id'] not in mylist:
-                    dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                    playk =False
-                    mud = '   '
-            # TODO: check this condiition please
-            if not dd["payable"] or dd['id'] in mylist or not self.skip_unaviable:
-                out.append({'title':PLchar(tyt)+dod,'url':urlid,'img':foto,'plot':PLchar(opis)})
+            # urlid = '%s:%s'%(vid,'kanal')  # mbebe
+            urlid = vid  # kszaq
+            opis = dd.get('lead', '')
+            if not self.is_allowed(dd):
+                tyt += ' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
+                if not self.skip_unaviable:
+                    out.append({'title': tyt, 'url': urlid, 'img': foto, 'plot': PLchar(opis)})
         return out
 
     def listCateg(self, idslug):
