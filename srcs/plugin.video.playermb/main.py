@@ -962,7 +962,7 @@ class PLAYERPL(object):
         because folder is not playable.
         """
         if vid in self._precessed_vid_list:
-            xbmc.log('PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGWARNING)
+            xbmc.log(u'PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGWARNING)
             if self.remove_duplicates:
                 return
         if meta is None and vod is not None:
@@ -976,14 +976,14 @@ class PLAYERPL(object):
             elif isPlayable is None:
                 isPlayable = not folder
             if suffix is None:
-                suffix = ''
+                suffix = u''
                 if no_playable and not allowed:
                     # auto suffix for non-playable video
-                    suffix += ' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
+                    suffix += u' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
                 sched = vod and vod.get('displaySchedules')
                 if sched and sched[0].get('type') == 'SOON':
-                    suffix += ' [COLOR gray] [LIGHT] (od %s)[/LIGHT][/COLOR]' % sched[0]['till'][:-3]
-            suffix = suffix or ''
+                    suffix += u' [COLOR gray] [LIGHT] (od %s)[/LIGHT][/COLOR]' % sched[0]['till'][:-3]
+            suffix = PLchar(suffix or '')
             descr = PLchar(meta.opis or meta.tytul) + '\n' + suffix
             info = {
                 'title': PLchar(meta.tytul) + suffix,
