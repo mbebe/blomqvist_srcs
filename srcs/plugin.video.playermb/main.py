@@ -421,28 +421,36 @@ def busy():
         xbmc.executebuiltin('ActivateWindow(busydialog)')
 
 
-def PLchar(char):
-    if type(char) is not str:
-        char=char.encode('utf-8')
-    char = char.replace('\\u0105','\xc4\x85').replace('\\u0104','\xc4\x84')
-    char = char.replace('\\u0107','\xc4\x87').replace('\\u0106','\xc4\x86')
-    char = char.replace('\\u0119','\xc4\x99').replace('\\u0118','\xc4\x98')
-    char = char.replace('\\u0142','\xc5\x82').replace('\\u0141','\xc5\x81')
-    char = char.replace('\\u0144','\xc5\x84').replace('\\u0144','\xc5\x83')
-    char = char.replace('\\u00f3','\xc3\xb3').replace('\\u00d3','\xc3\x93')
-    char = char.replace('\\u015b','\xc5\x9b').replace('\\u015a','\xc5\x9a')
-    char = char.replace('\\u017a','\xc5\xba').replace('\\u0179','\xc5\xb9')
-    char = char.replace('\\u017c','\xc5\xbc').replace('\\u017b','\xc5\xbb')
-    char = char.replace('&#8217;',"'")
-    char = char.replace('&#8211;',"-")
-    char = char.replace('&#8230;',"...")
-    char = char.replace('&#8222;','"').replace('&#8221;','"')
-    char = char.replace('[&hellip;]',"...")
-    char = char.replace('&#038;',"&")
-    char = char.replace('&#039;',"'")
-    char = char.replace('&quot;','"')
-    char = char.replace('&nbsp;',".").replace('&amp;','&')
-    return char
+def PLchar(*args, **kwargs):
+    sep = kwargs.pop('sep', ' ')
+    if kwargs:
+        raise TypeError('Unexpected keywoard arguemnt(s): %s' % ' '.join(kwargs.keys()))
+    out = ''
+    for i, char in enumerate(args):
+        if type(char) is not str:
+            char = char.encode('utf-8')
+        char = char.replace('\\u0105','\xc4\x85').replace('\\u0104','\xc4\x84')
+        char = char.replace('\\u0107','\xc4\x87').replace('\\u0106','\xc4\x86')
+        char = char.replace('\\u0119','\xc4\x99').replace('\\u0118','\xc4\x98')
+        char = char.replace('\\u0142','\xc5\x82').replace('\\u0141','\xc5\x81')
+        char = char.replace('\\u0144','\xc5\x84').replace('\\u0144','\xc5\x83')
+        char = char.replace('\\u00f3','\xc3\xb3').replace('\\u00d3','\xc3\x93')
+        char = char.replace('\\u015b','\xc5\x9b').replace('\\u015a','\xc5\x9a')
+        char = char.replace('\\u017a','\xc5\xba').replace('\\u0179','\xc5\xb9')
+        char = char.replace('\\u017c','\xc5\xbc').replace('\\u017b','\xc5\xbb')
+        char = char.replace('&#8217;',"'")
+        char = char.replace('&#8211;',"-")
+        char = char.replace('&#8230;',"...")
+        char = char.replace('&#8222;','"').replace('&#8221;','"')
+        char = char.replace('[&hellip;]',"...")
+        char = char.replace('&#038;',"&")
+        char = char.replace('&#039;',"'")
+        char = char.replace('&quot;','"')
+        char = char.replace('&nbsp;',".").replace('&amp;','&')
+        if i:
+            out += sep
+        out += char
+    return out
 
 
 def historyLoad():
@@ -488,7 +496,7 @@ class PLAYERPL(object):
         self.KATEGORIE = self.api_base + 'item/category/list'
 
         self.PRODUCTVODLIST = self.api_base + 'product/vod/list'
-        self.PRODUCTLIVELIST= self.api_base + 'product/list/list'
+        self.PRODUCTLIVELIST = self.api_base + 'product/list/list'
 
         self.PARAMS = {'4K': 'true', 'platform': PF}
 
@@ -983,16 +991,17 @@ class PLAYERPL(object):
                 sched = vod and vod.get('displaySchedules')
                 if sched and sched[0].get('type') == 'SOON':
                     suffix += u' [COLOR gray] [LIGHT] (od %s)[/LIGHT][/COLOR]' % sched[0]['till'][:-3]
-            suffix = PLchar(suffix or '')
-            descr = PLchar(meta.opis or meta.tytul) + '\n' + suffix
+            suffix = suffix or ''
+            title = PLchar(meta.tytul, suffix, sep='')
+            descr = PLchar(meta.opis or meta.tytul, suffix, sep='\n')
             info = {
-                'title': PLchar(meta.tytul) + suffix,
+                'title': title,
                 'plot': descr,
                 'plotoutline': descr,
                 'tagline': descr,
                 # 'genre': 'Nawalanka',  # this is shown in Arctic: Zephyr 2 - Resurrection Mod
             }
-            add_item(str(vid), PLchar(meta.tytul) + suffix, meta.foto or ADDON_ICON, mud,
+            add_item(str(vid), title, meta.foto or ADDON_ICON, mud,
                      folder=folder, isPlayable=isPlayable, infoLabels=info, art=meta.art,
                      linkdata=linkdata)
             self._precessed_vid_list.add(vid)
@@ -1023,13 +1032,12 @@ class PLAYERPL(object):
                            headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'))
         mud = "listcollectContent"
         for vod in data:
-            dod = ''
             vid = vod['id']
             slug = vod['slug']
             meta = self.get_meta_data(vod)
             info = {
-                'title': PLchar(meta.tytul) + dod,
-                'plot': PLchar(meta.opis or meta.tytul) + '\n' + dod
+                'title': PLchar(meta.tytul),
+                'plot': PLchar(meta.opis or meta.tytul),
             }
             add_item(str(vid)+':'+str(slug), meta.tytul, meta.foto, mud, folder=True,
                      infoLabels=info, art=meta.art)
@@ -1088,13 +1096,13 @@ class PLAYERPL(object):
             sez = (vod["season"]["number"])
             tyt = PLchar((vod["season"]["serial"]["title"]))
             if 'fakty-' in vod.get('shareUrl', ''):
-                name = '%s - %s' % (tyt, PLchar(vod['title']))
-                tytul = '%s %s %s' % (tyt, self.dywiz, PLchar(vod['title']))
+                name = PLchar(tyt, '-', vod['title'])
+                tytul = PLchar(tyt, self.dywiz, vod['title'])
             else:
                 name = '%s - S%02dE%02d' % (tyt, sez, epiz)
-                tytul = '%s %s S%02dE%02d' % (tyt, self.dywiz, sez, epiz)
+                tytul = '%s %s S%02dE%02d' % (tyt, PLchar(self.dywiz), sez, epiz)
             if vod.get('title'):
-                tytul += ' %s %s' % (self.dywiz, vod['title'].strip())
+                tytul += PLchar('', self.dywiz, vod['title'].strip())
             meta = meta._replace(tytul=tytul)
             self.add_media_item('playvid', vid, meta, folder=False, vod=vod, linkdata={'name': name})
         setView('episodes')
@@ -1108,13 +1116,13 @@ class PLAYERPL(object):
         out = []
         sezony = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
         for sezon in sezony:
-            seas=str(sezon['number'])
-            urlid = '%s:%s'%(str(id),str(sezon['id']))
-            title = '%s - Sezon %s'%(tytul,seas)
+            seas = str(sezon['number'])
+            urlid = '%s:%s' % (id, sezon['id'])
+            title = '%s - Sezon %s' % (tytul, seas)
             if not typ:
-                seas=str(sezon["display"])
-                title = '%s / %s'%(tytul,seas)
-            out.append({'title':PLchar(title),'url':urlid,'img':foto,'plot':PLchar(opis)})
+                seas = str(sezon["display"])
+                title = '%s / %s' % (tytul, seas)
+            out.append({'title': PLchar(title), 'url': urlid, 'img': foto, 'plot': PLchar(opis)})
         return out
 
     def listCategSerial(self, id):
@@ -1128,9 +1136,10 @@ class PLAYERPL(object):
                 typ = False
             items = self.getSezony(id, meta.tytul, meta.opis, meta.foto, typ)
             for f in items:
-                add_item(name=f.get('title'), url=f.get('url'), mode='listEpizody', image=f.get('img'), folder=True, infoLabels=f)
+                add_item(name=f.get('title'), url=f.get('url'), mode='listEpizody', image=f.get('img'),
+                         folder=True, infoLabels=f)
         setView('episodes')
-        #xbmcplugin.setContent(addon_handle, 'episodes')
+        # xbmcplugin.setContent(addon_handle, 'episodes')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
 
