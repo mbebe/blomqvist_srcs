@@ -706,7 +706,7 @@ def PlayVid(id,tv=False):
         url = 'https://api.cda.pl/video/'+str(id)
         
         response = getJson(url=url, auth=True)
-        if 'access_token_expired' in response:
+        if 'error' in response:
             log,profil = LogowanieCda()    
             response = getJson(url=url, auth=True)
         videodata = response.get("video",None)
