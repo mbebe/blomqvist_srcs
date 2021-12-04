@@ -72,8 +72,8 @@ from resources.lib.udata import AddonUserData
 # from resources.lib.tools import U, uclean, NN, fragdict
 
 
-MetaDane = namedtuple('MetaDane', 'tytul opis foto sezon epizod fanart thumb landscape poster')
-MetaDane.__new__.__defaults__ = 4*(None,)
+MetaDane = namedtuple('MetaDane', 'tytul opis foto sezon epizod fanart thumb landscape poster allowed')
+MetaDane.__new__.__defaults__ = 5*(None,)
 MetaDane.art = property(lambda self: {k: v for k in 'fanart thumb landscape poster'.split()
                                       for v in (getattr(self, k),) if v})
 
@@ -107,9 +107,9 @@ HISTORY_SIZE = 50
 
 addon_data = AddonUserData(os.path.join(DATAPATH, 'data.json'))
 exlink = params.get('url')
-name = params.get('name')
-page = params.get('page', '')
-rys = params.get('image')
+# name = params.get('name')
+# page = params.get('page', '')
+# rys = params.get('image')
 kukz = ''
 
 
@@ -224,7 +224,7 @@ def build_url(query):
 
 def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=None, movie=True,
              itemcount=1, page=1, fanart=None, moviescount=0, properties=None, thumb=None,
-             contextmenu=None, art=None):
+             contextmenu=None, art=None, linkdata=None):
     list_item = xbmcgui.ListItem(label=name)
     if isPlayable:
         list_item.setProperty("isPlayable", 'True')
@@ -250,10 +250,16 @@ def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=
         list_item.setProperties(properties)
     if contextmenu:
         list_item.addContextMenuItems(contextmenu, replaceItems=False)
+    # link data used to build link,to support old one
+    linkdata = {} if linkdata is None else dict(linkdata)
+    linkdata.setdefault('name', name)
+    linkdata.setdefault('image', image)
+    linkdata.setdefault('page', page)
+    # add item
     ok = xbmcplugin.addDirectoryItem(
         handle=addon_handle,
-        url=build_url({'mode': mode, 'url': url, 'page': page, 'moviescount': moviescount,
-                       'movie': movie, 'name': name, 'image': image}),
+        url=build_url({'mode': mode, 'url': url, 'page': linkdata['page'], 'moviescount': moviescount,
+                       'movie': movie, 'name': linkdata['name'], 'image': linkdata['image']}),
         listitem=list_item,
         isFolder=folder)
     return ok
@@ -415,28 +421,36 @@ def busy():
         xbmc.executebuiltin('ActivateWindow(busydialog)')
 
 
-def PLchar(char):
-    if type(char) is not str:
-        char=char.encode('utf-8')
-    char = char.replace('\\u0105','\xc4\x85').replace('\\u0104','\xc4\x84')
-    char = char.replace('\\u0107','\xc4\x87').replace('\\u0106','\xc4\x86')
-    char = char.replace('\\u0119','\xc4\x99').replace('\\u0118','\xc4\x98')
-    char = char.replace('\\u0142','\xc5\x82').replace('\\u0141','\xc5\x81')
-    char = char.replace('\\u0144','\xc5\x84').replace('\\u0144','\xc5\x83')
-    char = char.replace('\\u00f3','\xc3\xb3').replace('\\u00d3','\xc3\x93')
-    char = char.replace('\\u015b','\xc5\x9b').replace('\\u015a','\xc5\x9a')
-    char = char.replace('\\u017a','\xc5\xba').replace('\\u0179','\xc5\xb9')
-    char = char.replace('\\u017c','\xc5\xbc').replace('\\u017b','\xc5\xbb')
-    char = char.replace('&#8217;',"'")
-    char = char.replace('&#8211;',"-")
-    char = char.replace('&#8230;',"...")
-    char = char.replace('&#8222;','"').replace('&#8221;','"')
-    char = char.replace('[&hellip;]',"...")
-    char = char.replace('&#038;',"&")
-    char = char.replace('&#039;',"'")
-    char = char.replace('&quot;','"')
-    char = char.replace('&nbsp;',".").replace('&amp;','&')
-    return char
+def PLchar(*args, **kwargs):
+    sep = kwargs.pop('sep', ' ')
+    if kwargs:
+        raise TypeError('Unexpected keywoard arguemnt(s): %s' % ' '.join(kwargs.keys()))
+    out = ''
+    for i, char in enumerate(args):
+        if type(char) is not str:
+            char = char.encode('utf-8')
+        char = char.replace('\\u0105','\xc4\x85').replace('\\u0104','\xc4\x84')
+        char = char.replace('\\u0107','\xc4\x87').replace('\\u0106','\xc4\x86')
+        char = char.replace('\\u0119','\xc4\x99').replace('\\u0118','\xc4\x98')
+        char = char.replace('\\u0142','\xc5\x82').replace('\\u0141','\xc5\x81')
+        char = char.replace('\\u0144','\xc5\x84').replace('\\u0144','\xc5\x83')
+        char = char.replace('\\u00f3','\xc3\xb3').replace('\\u00d3','\xc3\x93')
+        char = char.replace('\\u015b','\xc5\x9b').replace('\\u015a','\xc5\x9a')
+        char = char.replace('\\u017a','\xc5\xba').replace('\\u0179','\xc5\xb9')
+        char = char.replace('\\u017c','\xc5\xbc').replace('\\u017b','\xc5\xbb')
+        char = char.replace('&#8217;',"'")
+        char = char.replace('&#8211;',"-")
+        char = char.replace('&#8230;',"...")
+        char = char.replace('&#8222;','"').replace('&#8221;','"')
+        char = char.replace('[&hellip;]',"...")
+        char = char.replace('&#038;',"&")
+        char = char.replace('&#039;',"'")
+        char = char.replace('&quot;','"')
+        char = char.replace('&nbsp;',".").replace('&amp;','&')
+        if i:
+            out += sep
+        out += char
+    return out
 
 
 def historyLoad():
@@ -482,7 +496,7 @@ class PLAYERPL(object):
         self.KATEGORIE = self.api_base + 'item/category/list'
 
         self.PRODUCTVODLIST = self.api_base + 'product/vod/list'
-        self.PRODUCTLIVELIST= self.api_base + 'product/list/list'
+        self.PRODUCTLIVELIST = self.api_base + 'product/list/list'
 
         self.PARAMS = {'4K': 'true', 'platform': PF}
 
@@ -511,11 +525,15 @@ class PLAYERPL(object):
 
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
         self.skip_unaviable = get_bool('avaliable_only')
+        self.fix_api = get_bool('fix_api')
+        self.remove_duplicates = get_bool('remove_duplicates')
         self.partial_size = int(addon.getSetting('partial_size') or 1000)
         # self.force_media_fanart = get_bool('self.force_media_fanart')
         self.force_media_fanart = True
         self.force_media_fanart_width = 1280
         self.force_media_fanart_quality = 85
+        self._precessed_vid_list = set()
+        self.dywiz = '–'
 
     def params(self, maxResults=False, **kwargs):
         """
@@ -550,7 +568,7 @@ class PLAYERPL(object):
             'API-ProfileUid': self.SELECTED_PROFILE_ID,
         }
 
-    def getMetaDane(self, data):
+    def get_meta_data(self, data):
         if not data.get('active', True):
             return '', '', '', None, None
         tytul = data['title']
@@ -587,7 +605,8 @@ class PLAYERPL(object):
             images['fanart'] = '%s?%s' % (iurl, urlencode(iparams))
         sezon = bool(data.get('showSeasonNumber')) or data.get('type') == 'SERIAL'
         epizod = bool(data.get("showEpisodeNumber"))
-        return MetaDane(tytul, opis, sezon=sezon, epizod=epizod, **images)
+        allowed = self.is_allowed(data)
+        return MetaDane(tytul, opis, sezon=sezon, epizod=epizod, allowed=allowed, **images)
 
     def createDatas(self):
 
@@ -935,33 +954,57 @@ class PLAYERPL(object):
     def mylist(self):
         self.remove_mylist()
 
-    def add_media_item(self, mud, vid, meta, suffix=None, folder=False, isPlayable=None):
+    def is_allowed(self, vod):
+        """Check if item (video, folder) is avaliable in current pay plan."""
+        return (
+            # not have to pay and not on ncPlus, it's means free
+            not (vod.get('payable') or vod.get('ncPlus'))
+            # or it's on myslit, it's means it is in pay plan
+            or vod.get('id') in self.mylist)
+
+    def add_media_item(self, mud, vid, meta=None, suffix=None, folder=False, isPlayable=None,
+                       vod=None, linkdata=None):
         """
         Add default media item to xbmc.list.
         if `isPlayable` is None (default) it's forced to `not folder`,
         because folder is not playable.
         """
-        if vid in self.mylist or not self.skip_unaviable:
-            no_acccess = not (mud or '').strip()
-            if no_acccess:
+        if vid in self._precessed_vid_list:
+            xbmc.log(u'PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGWARNING)
+            if self.remove_duplicates:
+                return
+        if meta is None and vod is not None:
+            meta = self.get_meta_data(vod)
+        allowed = (meta and meta.allowed is True) or vid in self.mylist
+        if allowed or not self.skip_unaviable:
+            no_playable = not (mud or '').strip() or meta.sezon
+            if no_playable:
                 isPlayable = False
                 folder = True
             elif isPlayable is None:
                 isPlayable = not folder
-            if suffix is None and no_acccess:
-                # auto suffix for non-playable video
-                suffix = ' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
+            if suffix is None:
+                suffix = u''
+                if no_playable and not allowed:
+                    # auto suffix for non-playable video
+                    suffix += u' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
+                sched = vod and vod.get('displaySchedules')
+                if sched and sched[0].get('type') == 'SOON':
+                    suffix += u' [COLOR gray] [LIGHT] (od %s)[/LIGHT][/COLOR]' % sched[0]['till'][:-3]
             suffix = suffix or ''
-            descr = PLchar(meta.opis or meta.tytul) + '\n' + suffix
+            title = PLchar(meta.tytul, suffix, sep='')
+            descr = PLchar(meta.opis or meta.tytul, suffix, sep='\n')
             info = {
-                'title': PLchar(meta.tytul) + suffix,
+                'title': title,
                 'plot': descr,
                 'plotoutline': descr,
                 'tagline': descr,
                 # 'genre': 'Nawalanka',  # this is shown in Arctic: Zephyr 2 - Resurrection Mod
             }
-            add_item(str(vid), PLchar(meta.tytul) + suffix, meta.foto or ADDON_ICON, mud,
-                     folder=folder, isPlayable=isPlayable, infoLabels=info, art=meta.art)
+            add_item(str(vid), title, meta.foto or ADDON_ICON, mud,
+                     folder=folder, isPlayable=isPlayable, infoLabels=info, art=meta.art,
+                     linkdata=linkdata)
+            self._precessed_vid_list.add(vid)
 
     def process_vod_list(self, vod_list, subitem=None):
         """
@@ -972,16 +1015,16 @@ class PLAYERPL(object):
             if subitem:
                 vod = vod[subitem]
             vid = vod['id']
-            meta = self.getMetaDane(vod)
+            meta = self.get_meta_data(vod)
             mud, fold = ' ', None
-            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus"):
+            if meta.allowed is True:
                 if vod['type'] == 'SERIAL':
                     mud = 'listcategSerial'
                     fold = True
                 else:
                     mud = 'playvid'
                     fold = False
-            self.add_media_item(mud, vid, meta, folder=fold)
+            self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
 
     def listCollection(self):
         self.refreshTokenTVN()
@@ -989,13 +1032,12 @@ class PLAYERPL(object):
                            headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'))
         mud = "listcollectContent"
         for vod in data:
-            dod = ''
             vid = vod['id']
             slug = vod['slug']
-            meta = self.getMetaDane(vod)
+            meta = self.get_meta_data(vod)
             info = {
-                'title': PLchar(meta.tytul) + dod,
-                'plot': PLchar(meta.opis or meta.tytul) + '\n' + dod
+                'title': PLchar(meta.tytul),
+                'plot': PLchar(meta.opis or meta.tytul),
             }
             add_item(str(vid)+':'+str(slug), meta.tytul, meta.foto, mud, folder=True,
                      infoLabels=info, art=meta.art)
@@ -1049,22 +1091,23 @@ class PLAYERPL(object):
         epizody = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
         for vod in epizody:
             vid = vod['id']
-            meta = self.getMetaDane(vod)
+            meta = self.get_meta_data(vod)
             epiz = vod["episode"]
             sez = (vod["season"]["number"])
             tyt = PLchar((vod["season"]["serial"]["title"]))
             if 'fakty-' in vod.get('shareUrl', ''):
-                tytul = '%s - %s' % (tyt, PLchar(vod['title']))
+                name = PLchar(tyt, '-', vod['title'])
+                tytul = PLchar(tyt, self.dywiz, vod['title'])
             else:
-                tytul = '%s - S%02dE%02d' % (tyt, sez, epiz)
-            mud = ' '
-            if vid in self.mylist or vod.get("payable") or vod.get("ncPlus"):
-                mud = 'playvid'
+                name = '%s - S%02dE%02d' % (tyt, sez, epiz)
+                tytul = '%s %s S%02dE%02d' % (tyt, PLchar(self.dywiz), sez, epiz)
+            if vod.get('title'):
+                tytul += PLchar('', self.dywiz, vod['title'].strip())
             meta = meta._replace(tytul=tytul)
-            self.add_media_item(mud, vid, meta, folder=False)
+            self.add_media_item('playvid', vid, meta, folder=False, vod=vod, linkdata={'name': name})
         setView('episodes')
         # xbmcplugin.setContent(addon_handle, 'episodes')
-        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
 
     def getSezony(self, id, tytul, opis, foto, typ):
@@ -1073,29 +1116,30 @@ class PLAYERPL(object):
         out = []
         sezony = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
         for sezon in sezony:
-            seas=str(sezon['number'])
-            urlid = '%s:%s'%(str(id),str(sezon['id']))
-            title = '%s - Sezon %s'%(tytul,seas)
+            seas = str(sezon['number'])
+            urlid = '%s:%s' % (id, sezon['id'])
+            title = '%s - Sezon %s' % (tytul, seas)
             if not typ:
-                seas=str(sezon["display"])
-                title = '%s / %s'%(tytul,seas)
-            out.append({'title':PLchar(title),'url':urlid,'img':foto,'plot':PLchar(opis)})
+                seas = str(sezon["display"])
+                title = '%s / %s' % (tytul, seas)
+            out.append({'title': PLchar(title), 'url': urlid, 'img': foto, 'plot': PLchar(opis)})
         return out
 
     def listCategSerial(self, id):
         self.refreshTokenTVN()
         urlk = 'https://player.pl/playerapi/product/vod/serial/%s' % id
         data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
-        meta = self.getMetaDane(data)
+        meta = self.get_meta_data(data)
         typ = True
         if meta.sezon or meta.epizod:
             if not meta.sezon:
                 typ = False
             items = self.getSezony(id, meta.tytul, meta.opis, meta.foto, typ)
             for f in items:
-                add_item(name=f.get('title'), url=f.get('url'), mode='listEpizody', image=f.get('img'), folder=True, infoLabels=f)
+                add_item(name=f.get('title'), url=f.get('url'), mode='listEpizody', image=f.get('img'),
+                         folder=True, infoLabels=f)
         setView('episodes')
-        #xbmcplugin.setContent(addon_handle, 'episodes')
+        # xbmcplugin.setContent(addon_handle, 'episodes')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
 
@@ -1126,28 +1170,19 @@ class PLAYERPL(object):
         urlk = 'https://player.pl/playerapi/product/live/list'
         out = []
         data = getRequests(urlk, headers=self.HEADERS2, params=self.PARAMS)
-        mylist = self.load_mylist()
-
         for dd in data:
-            id_=dd['id']
-            tyt=dd['title']
+            vid = dd['id']
+            tyt = PLchar(dd['title'])
             foto = dd['images']['pc'][0]['mainUrl']
             foto = 'https:' + foto if foto.startswith('//') else foto
-            # urlid = '%s:%s'%(id_,'kanal')  # mbebe
-            urlid = id_  # kszaq
-            try:
-                opis = dd['lead']
-            except:
-                opis=''
-            dod=''
-            if dd["payable"]:
-                if dd['id'] not in mylist:
-                    dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                    playk =False
-                    mud = '   '
-            # TODO: check this condiition please
-            if not dd["payable"] or dd['id'] in mylist or not self.skip_unaviable:
-                out.append({'title':PLchar(tyt)+dod,'url':urlid,'img':foto,'plot':PLchar(opis)})
+            # urlid = '%s:%s'%(vid,'kanal')  # mbebe
+            urlid = vid  # kszaq
+            opis = dd.get('lead', '')
+            allowed = self.is_allowed(dd)
+            if not allowed:
+                tyt += ' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
+            if allowed or not self.skip_unaviable:
+                out.append({'title': tyt, 'url': urlid, 'img': foto, 'plot': PLchar(opis)})
         return out
 
     def listCateg(self, idslug):
@@ -1205,6 +1240,7 @@ class PLAYERPL(object):
 if __name__ == '__main__':
 
     mode = params.get('mode', None)
+    name = params.get('name')
     xbmc.log('PLAYER.PL: ENTER: mode=%r, name=%r, exlink=%r' % (mode, name, exlink),
              xbmc.LOGWARNING)
 
@@ -1217,14 +1253,13 @@ if __name__ == '__main__':
     elif mode == "listcateg":
         PLAYERPL().listCateg(exlink)
 
-
-    elif mode == "listcategContent"    :
+    elif mode == "listcategContent":
         PLAYERPL().listCategContent(exlink)
 
-    elif mode == "listcategSerial"    :
-        PLAYERPL().listCategSerial    (exlink)
-    elif mode == "listEpizody"    :
-        PLAYERPL().listEpizody    (exlink)
+    elif mode == "listcategSerial":
+        PLAYERPL().listCategSerial(exlink)
+    elif mode == "listEpizody":
+        PLAYERPL().listEpizody(exlink)
 
     elif mode == 'search.it':
         query = exlink
