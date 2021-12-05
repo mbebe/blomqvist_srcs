@@ -1267,7 +1267,7 @@ class PLAYERPL(object):
         xbmcplugin.endOfDirectory(addon_handle)
         xbmc.log('PLAYER.PL: folder done, skip=%s' % self.skip_unaviable, xbmc.LOGWARNING)
     # Poczatek modyfikacji @m1992:
-    def EurosportHome(self,exlink=None):
+    def eurosportHome(self,exlink=None):
         """
         Nowa funkcja stworzona przez @m1992. Zajmuje sie listowaniem zawartosci pakietu Eurosportu.
         """
@@ -1284,7 +1284,7 @@ class PLAYERPL(object):
             
             urlk = self.api_base + 'product/section/list/eurosport'
             data = getRequests(urlk, headers = self.HEADERS2, params = self.PARAMS)
-            data = self.DropFutureEurosportLives(data)
+            data = self.dropFutureEurosportLives(data)
 
             result = []
             for item in data:
@@ -1383,7 +1383,7 @@ class PLAYERPL(object):
                 # xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P") // REZYGNUJE z sortowania, bo wtedy ustawiaja sie od najstarszych transmisji, a wolelibysmy raczej od najnowszych
                 xbmcplugin.endOfDirectory(addon_handle)
 
-    def DropFutureEurosportLives(self,sections):
+    def dropFutureEurosportLives(self,sections):
         """
         Nowa funkcja stworzona przez @m1992. Sposrod danych zwroconych przez system Playera usuwam elementy, ktore sa tylko zapowiedziami przyszlych transmisji.
         """
@@ -1426,7 +1426,7 @@ if __name__ == '__main__':
 
     # Poczatek modyfikacji @m1992:
     elif mode == "eurosport"    :
-        PLAYERPL().EurosportHome(exlink)
+        PLAYERPL().eurosportHome(exlink)
     # Koniec modyfikacji @m1992
 
     elif mode == 'search.it':
