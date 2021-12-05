@@ -2,6 +2,9 @@
 
 import sys, re, os
 import time
+# Poczatek modyfikacji @m1992
+from datetime import date,datetime,timedelta
+# Koniec modyfikacji @m1992
 from collections import namedtuple
 
 
@@ -294,6 +297,9 @@ def home():
     PLAYERPL().sprawdzenie2()
     add_item('', '[B][COLOR khaki]Ulubione[/COLOR][/B]', ADDON_ICON, "favors", folder=True)
     getmenu()
+    # Poczatek modyfikacji @m1992:
+    add_item('1;'+'24'+':'+'eurosport', 'Eurosport', ADDON_ICON, "eurosport", folder=True,fanart=FANART)
+    # Koniec modyfikacji @m1992
     add_item('', 'Kolekcje', ADDON_ICON, "collect", folder=True)
     add_item('', '[B][COLOR khaki]Szukaj[/COLOR][/B]', ADDON_ICON, "search", folder=True)
     add_item('', '[B][COLOR blue]Opcje[/COLOR][/B]', ADDON_ICON, "opcje", folder=False)
@@ -736,6 +742,10 @@ class PLAYERPL(object):
         return data
 
     def getPlaylist(self,id_):
+        """
+        Opis modyfikacji dokonanej przez @m1992:
+        Dodatkowe streamy Eurosportu nie maja DRM. Modyfikacja umozliwia ich prawidlowe odtwarzanie.
+        """
         self.refreshTokenTVN()
 
         data = self.getTranslate(str(id_))
@@ -785,13 +795,19 @@ class PLAYERPL(object):
         except:
             pass
 
-        src = vid['video']['sources']['dash']['url']
-        tshiftl = vid.get('video', {}).get('time_shift', {}).get('total_length', 0)
-        if tshiftl > 0:
-            src += '&dvr=' + str(tshiftl * 1000 + 1000)
-        widev = vid['video']['protections']['widevine']['src']
-        if vidsesid:
-            widev += '&videoSessionId=%s' % vidsesid
+        # Poczatek modyfikacji @m1992:
+        if 'widevine' in vid['video']['protections']:
+            src = vid['video']['sources']['dash']['url']
+            tshiftl = vid.get('video', {}).get('time_shift', {}).get('total_length', 0)
+            if tshiftl > 0:
+                src += '&dvr=' + str(tshiftl * 1000 + 1000)
+            widev = vid['video']['protections']['widevine']['src']
+            if vidsesid:
+                widev += '&videoSessionId=%s' % vidsesid
+        else:
+            src=vid['video']['sources']['hls']['url']
+            widev=None
+        # Koniec modyfikacji @m1992
         return src, widev, outsub
 
     def refreshTokenTVN(self):
@@ -811,6 +827,10 @@ class PLAYERPL(object):
         return data
 
     def playvid(self, id):
+        """
+        Opis modyfikacji dokonanej przez @m1992:
+        Dodatkowe streamy Eurosportu nie maja DRM. Modyfikacja umozliwia ich prawidlowe odtwarzanie.
+        """
 
         stream_url, license_url, subtitles = self.getPlaylist(str(id))
         subt = ''
@@ -836,44 +856,55 @@ class PLAYERPL(object):
 
 
 
-        import inputstreamhelper
+        # Poczatek modyfikacji @m1992:
+        if license_url:
+            import inputstreamhelper
 
-        PROTOCOL = 'mpd'
-        DRM = 'com.widevine.alpha'
+            PROTOCOL = 'mpd'
+            DRM = 'com.widevine.alpha'
 
-        str_url = stream_url
+            str_url = stream_url
 
-        HEADERSz = {
-            'User-Agent': UA,
-        }
+            HEADERSz = {
+                'User-Agent': UA,
+            }
 
-        is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
-        if is_helper.check_inputstream():
+            is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
+            if is_helper.check_inputstream():
 
-            play_item = xbmcgui.ListItem(path=str_url)
-            play_item.setContentLookup(False)
+                play_item = xbmcgui.ListItem(path=str_url)
+                play_item.setContentLookup(False)
+                if subt:
+                    r = requests.get(subt)
+                    with open(SUBTITLEFILE, 'wb') as f:
+                       f.write(r.content)
+                    play_item.setSubtitles([SUBTITLEFILE])
+
+
+                if sys.version_info >= (3,0,0):
+                    play_item.setProperty('inputstream', is_helper.inputstream_addon)
+                else:
+                    play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
+
+                play_item.setMimeType('application/xml+dash')
+                play_item.setContentLookup(False)
+                play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
+                play_item.setProperty('inputstream.adaptive.license_type', DRM)
+                if 'dvr' in str_url:
+                    play_item.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
+                play_item.setProperty('inputstream.adaptive.license_key', license_url+'|Content-Type=|R{SSM}|')
+                play_item.setProperty('inputstream.adaptive.license_flags', "persistent_storage")
+                play_item.setProperty('inputstream.adaptive.stream_headers', urlencode(HEADERSz))
+            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
+        else:
+            play_item = xbmcgui.ListItem(path=stream_url)
             if subt:
                 r = requests.get(subt)
                 with open(SUBTITLEFILE, 'wb') as f:
                    f.write(r.content)
                 play_item.setSubtitles([SUBTITLEFILE])
-
-
-            if sys.version_info >= (3,0,0):
-                play_item.setProperty('inputstream', is_helper.inputstream_addon)
-            else:
-                play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
-
-            play_item.setMimeType('application/xml+dash')
-            play_item.setContentLookup(False)
-            play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
-            play_item.setProperty('inputstream.adaptive.license_type', DRM)
-            if 'dvr' in str_url:
-                play_item.setProperty('inputstream.adaptive.manifest_update_parameter', 'full')
-            play_item.setProperty('inputstream.adaptive.license_key', license_url+'|Content-Type=|R{SSM}|')
-            play_item.setProperty('inputstream.adaptive.license_flags', "persistent_storage")
-            play_item.setProperty('inputstream.adaptive.stream_headers', urlencode(HEADERSz))
-        xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
+            xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
+        # Koniec modyfikacji @m1992
 
     def slug_data(self, idslug, maxResults=True, plOnly=False):
         xbmc.log('PLAYER.PL: slug %s started' % idslug, xbmc.LOGWARNING)
@@ -1235,6 +1266,138 @@ class PLAYERPL(object):
                                  label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
         xbmc.log('PLAYER.PL: folder done, skip=%s' % self.skip_unaviable, xbmc.LOGWARNING)
+    # Poczatek modyfikacji @m1992:
+    def EurosportHome(self,exlink=None):
+        """
+        Nowa funkcja stworzona przez @m1992. Zajmuje sie listowaniem zawartosci pakietu Eurosportu.
+        """
+
+        eurosportMode,exlink = exlink.split(';')
+
+        self.refreshTokenTVN()
+
+        if int(eurosportMode) == 1:
+            add_item('2;', 'Transmisje sportowe wg daty i godziny (ostatnie 7 dni)', ADDON_ICON, "eurosport", folder=True,fanart=FANART)
+            add_item('4;', 'Transmisje sportowe wg dyscypliny', ADDON_ICON, "eurosport", folder=True,fanart=FANART)
+            add_item(':eurosport', 'Archiwum wszystkich transmisji', ADDON_ICON, "listcategContent", folder=True,fanart=FANART)
+
+            
+            urlk = self.api_base + 'product/section/list/eurosport'
+            data = getRequests(urlk, headers = self.HEADERS2, params = self.PARAMS)
+            data = self.DropFutureEurosportLives(data)
+
+            result = []
+            for item in data:
+                resultItem = {}
+
+                id_=item['id']
+                slug = item['slug']
+                typ = item['type']
+                try:
+                    foto = item['images']['pc'][0]['mainUrl']
+                    foto = 'https:' + foto if foto.startswith('//') else foto
+                except:
+                    foto = ADDON_ICON
+                tytul = PLchar(item["title"].lower().capitalize())
+
+                add_item(str(id_)+':'+str(slug), tytul, foto, "listcollectContent", folder=True,fanart=FANART)
+            setView('movies')
+            # xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P") // usuwam sortowanie, poniewaz zalezy mi na wlasnej kolejnosci, tak aby dodane przeze mnie sposoby wyszukiwania pozostaly na poczatku listy
+            xbmcplugin.endOfDirectory(addon_handle)
+        elif int(eurosportMode) == 2:
+            # Wyswietla menu z datami z ostatnich 7 dni (gdy wybrano transmisje wg daty i godziny)
+            i = 0
+            while i <= 7:
+                todayDate = datetime.combine(date.today(), datetime.min.time())
+                day = todayDate - timedelta(days=i)
+                beginTimestamp = int( 1000 * time.mktime( day.timetuple() ) )
+                endTimestamp = int( -1 + 1000 * time.mktime( ( day + timedelta(days=1) ).timetuple() ) )
+                add_item('3;'+str(beginTimestamp)+':'+str(endTimestamp), day.strftime('%Y-%m-%d'), ADDON_ICON, "eurosport", folder=True,fanart=FANART)
+                i += 1
+            setView('movies')
+            xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+            xbmcplugin.endOfDirectory(addon_handle)
+        elif int(eurosportMode) == 3:
+            # Wyswietla liste transmisji z zadanego wczesniej dnia
+            if exlink:
+                beginTimestamp,endTimestamp = exlink.split(':')
+                urlk = self.api_base + 'product/vod/list'
+                params = { 'sort': 'airingSince', 'order': 'desc', 'maxResults': '0', 'firstResult': '0', 'category[]': 'eurosport', 'airingSince': str(beginTimestamp), 'airingTill': str(endTimestamp) }
+                params.update(self.PARAMS)
+                data = getRequests(urlk, headers = self.HEADERS2, params = params)
+                myList = getRequests('https://player.pl/playerapi/subscriber/product/available/list?4K=true&platform=ANDROID_TV', headers = self.HEADERS2, params = {})
+                for item in data['items']:
+                    if ( ( 'displaySchedules' in item ) and ( len(item['displaySchedules']) > 0 ) and ( item['displaySchedules'][0]['type'] != 'SOON' ) ):
+                        dod=''
+                        fold = False
+                        playk =True
+                        mud = 'playvid'
+                        if item["payable"]:
+                            if item['id'] not in myList:
+                                dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
+                                playk =False
+                                mud = '   '
+                        if item['airingSince'] and item['airingTill']:
+                            start_hour = item['airingSince'].split(' ')[1].split(':')
+                            end_hour = item['airingTill'].split(' ')[1].split(':')
+                            time_str = '[%s:%s-%s:%s] '%(str(start_hour[0]),str(start_hour[1]),str(end_hour[0]),str(end_hour[1]))
+                        else:
+                            time_str = ''
+                        add_item(str(item['id']), time_str+PLchar(item['title'])+dod, ADDON_ICON, mud, folder=fold,isPlayable=playk,fanart=FANART)
+                setView('tvshows')    
+                xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+                xbmcplugin.endOfDirectory(addon_handle)
+        elif int(eurosportMode) == 4:
+            urlk = self.api_base + 'item/category/24/genre/list'
+            genreList = getRequests(urlk, headers = self.HEADERS2, params = self.PARAMS)
+            for genre in genreList:
+                add_item('5;'+str(genre['id']), PLchar(genre['name'].lower().capitalize()), ADDON_ICON, 'eurosport', folder=True, fanart=FANART)
+            setView('movies')
+            xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+            xbmcplugin.endOfDirectory(addon_handle)
+        elif int(eurosportMode) == 5:
+            if exlink:
+                genreId = int(exlink)
+                urlk = self.api_base + 'product/vod/list'
+                params = { 'sort' : 'airingSince', 'order' : 'desc', 'maxResults' : '0', 'firstResult' : '0', 'category[]' : 'eurosport', 'genreId[]' : genreId }
+                params.update(self.PARAMS)
+                data = getRequests(urlk, headers = self.HEADERS2, params = params)
+                myList = getRequests('https://player.pl/playerapi/subscriber/product/available/list?4K=true&platform=ANDROID_TV', headers = self.HEADERS2, params = {})
+                for item in data['items']:
+                    if ( ( 'displaySchedules' in item ) and ( len(item['displaySchedules']) > 0 ) and ( item['displaySchedules'][0]['type'] != 'SOON' ) ):
+                        dod=''
+                        fold = False
+                        playk =True
+                        mud = 'playvid'
+                        if item["payable"]:
+                            if item['id'] not in myList:
+                                dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
+                                playk =False
+                                mud = '   '
+                        if item['airingSince']:
+                            time_str = PLchar('['+item['airingSince'][:item['airingSince'].rindex(':')]+'] ') # date i godzine rozpoczecia zapisuje w formacie: [YYYY-MM-DD HH:MM] (oprawiona nawiasami kwadratowymi i spacja na koncu zeby ladnie sie komponowalo z tytulem transmisji)
+                        else:
+                            time_str = ''
+                        add_item(str(item['id']), time_str+PLchar(item['title'])+dod, ADDON_ICON, mud, folder=fold,isPlayable=playk,fanart=FANART)
+                setView('tvshows')    
+                # xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P") // REZYGNUJE z sortowania, bo wtedy ustawiaja sie od najstarszych transmisji, a wolelibysmy raczej od najnowszych
+                xbmcplugin.endOfDirectory(addon_handle)
+
+    def DropFutureEurosportLives(self,sections):
+        """
+        Nowa funkcja stworzona przez @m1992. Sposrod danych zwroconych przez system Playera usuwam elementy, ktore sa tylko zapowiedziami przyszlych transmisji.
+        """
+        result = []
+        for section in sections:
+            displayedItems = []
+            for item in section['items']:
+                if ( ( 'displaySchedules' in item ) and ( len(item['displaySchedules']) > 0 ) and ( item['displaySchedules'][0]['type'] != 'SOON' ) ):
+                    displayedItems.append(item)
+            displayedSection = section.copy()
+            displayedSection['items'] = displayedItems
+            result.append(displayedSection)
+        return result
+    # Koniec modyfikacji @m1992
 
 
 if __name__ == '__main__':
@@ -1260,6 +1423,11 @@ if __name__ == '__main__':
         PLAYERPL().listCategSerial(exlink)
     elif mode == "listEpizody":
         PLAYERPL().listEpizody(exlink)
+
+    # Poczatek modyfikacji @m1992:
+    elif mode == "eurosport"    :
+        PLAYERPL().EurosportHome(exlink)
+    # Koniec modyfikacji @m1992
 
     elif mode == 'search.it':
         query = exlink

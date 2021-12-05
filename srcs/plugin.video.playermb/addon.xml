@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.playermb" version="1.11" name="PlayerPLmb" provider-name="mbebe, kszaq, rysson">
+<addon id="plugin.video.playermb" version="1.12" name="PlayerPLmb" provider-name="mbebe, kszaq, rysson, m1992">
 <requires>
     <!-- <import addon="xbmc.python" version="3.0.0" /> -->
     <import addon="script.module.six" />
@@ -25,21 +25,25 @@
         <screenshot>resources/screenshot-01.jpg</screenshot>
         <screenshot>resources/screenshot-02.jpg</screenshot>
     </assets>
-		<news>1.11
-- forsowanie seriali nawet gdy nie są w liście dozwolonych
-- usuwanie duplikatów
-- poprawa dostępnych materiałów
-1.10
-- szybsze połączenia i obsługa błędów SSL
-- obrazki
-- time shift w TV
-- historia wyszukiwania
-- tylko do Ciebie
-1.9
-1.8
- - fix niezsynchronizowanych napisow
- - zapisywanie domyslnego jezyka napisow
-1.7
- - KODI 19</news>
+        <news>
+            1.12
+            - odtwarzanie transmisji i VOD z podstrony 'player.pl/eurosport'
+            1.11
+            - forsowanie seriali nawet gdy nie są w liście dozwolonych
+            - usuwanie duplikatów
+            - poprawa dostępnych materiałów
+            1.10
+            - szybsze połączenia i obsługa błędów SSL
+            - obrazki
+            - time shift w TV
+            - historia wyszukiwania
+            - tylko do Ciebie
+            1.9
+            1.8
+             - fix niezsynchronizowanych napisow
+             - zapisywanie domyslnego jezyka napisow
+            1.7
+             - KODI 19
+        </news>
 </extension>
 </addon>
