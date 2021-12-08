@@ -77,6 +77,14 @@ MetaDane.__new__.__defaults__ = 5*(None,)
 MetaDane.art = property(lambda self: {k: v for k in 'fanart thumb landscape poster'.split()
                                       for v in (getattr(self, k),) if v})
 
+ExLink = namedtuple('ExLink', 'gid slug mode a1 a2')
+ExLink.__new__.__defaults__ = 3*(None,)
+ExLink.new = classmethod(lambda cls, exlink: cls(*exlink.split(':')[:5]))
+# slug = "eurosport", mode = "schedule"
+ExLink.beginTimestamp = property(lambda self: self.a1)
+ExLink.endTimestamp = property(lambda self: self.a2)
+
+
 UA = 'okhttp/3.3.1 Android'
 # UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:87.0) Gecko/20100101 Firefox/87.0'
 PF = 'ANDROID_TV'
@@ -228,10 +236,13 @@ def build_url(query):
 
 def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=None, movie=True,
              itemcount=1, page=1, fanart=None, moviescount=0, properties=None, thumb=None,
-             contextmenu=None, art=None, linkdata=None, fallback_image=ADDON_ICON):
+             contextmenu=None, art=None, linkdata=None, fallback_image=ADDON_ICON,
+             label2=None):
     list_item = xbmcgui.ListItem(label=name)
+    if label2 is not None:
+        list_item.setLabel2(label2)
     if isPlayable:
-        list_item.setProperty("isPlayable", 'True')
+        list_item.setProperty("isPlayable", 'true')
     if not infoLabels:
         infoLabels = {'title': name, 'plot': name}
     list_item.setInfo(type="video", infoLabels=infoLabels)
@@ -305,6 +316,9 @@ def home():
     add_item('', '[B][COLOR blue]Opcje[/COLOR][/B]', ADDON_ICON, "opcje", folder=False)
     if playerpl.LOGGED == 'true':
         add_item('', '[B][COLOR blue]Wyloguj[/COLOR][/B]', ADDON_ICON, "logout", folder=False)
+    setView('addons')
+    # xbmcplugin.setContent(addon_handle, 'tvshows')
+    xbmcplugin.endOfDirectory(addon_handle)
 
 
 def get_addon():
@@ -500,9 +514,11 @@ class PLAYERPL(object):
         self.JINFO = self.api_base + 'info'
         self.TRANSLATE = self.api_base + 'item/translate'
         self.KATEGORIE = self.api_base + 'item/category/list'
+        self.GATUNKI_KATEGORII = self.api_base + 'item/category/{cid}/genre/list'
 
         self.PRODUCTVODLIST = self.api_base + 'product/vod/list'
-        self.PRODUCTLIVELIST = self.api_base + 'product/list/list'
+        self.PRODUCTLIVELIST = self.api_base + 'product/live/list'
+        self.SECTIONLIST = self.api_base + 'product/section/list'
 
         self.PARAMS = {'4K': 'true', 'platform': PF}
 
@@ -540,6 +556,8 @@ class PLAYERPL(object):
         self.force_media_fanart_quality = 85
         self._precessed_vid_list = set()
         self.dywiz = '–'
+        self.hard_separator = ' '
+        self.week_days = (u'poniedziałek', u'wtorek', u'środa', u'czwartek', u'piątek', u'sobota', u'niedziela')
 
     def params(self, maxResults=False, **kwargs):
         """
@@ -551,7 +569,7 @@ class PLAYERPL(object):
             Extra pamars appended to result
         """
         params = dict(self.PARAMS)
-        if maxResults:
+        if maxResults or isinstance(maxResults, int):
             if maxResults is True:
                 maxResults = self.MaxMax if self.skip_unaviable else self.partial_size
             params['maxResults'] = maxResults or 0
@@ -736,16 +754,14 @@ class PLAYERPL(object):
             add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ADDON_ICON, "login", folder=False)
 
     def getTranslate(self,id_):
-
-        PARAMS = {'4K': 'true','platform': PF, 'id': id_}
-        data = getRequests(self.TRANSLATE,headers=self.HEADERS2, params=PARAMS)
+        PARAMS = {'4K': 'true', 'platform': PF, 'id': id_}
+        data = getRequests(self.TRANSLATE, headers=self.HEADERS2, params=PARAMS)
         return data
 
-    def getPlaylist(self,id_):
+    def getPlaylist(self, id_):
         self.refreshTokenTVN()
-
         data = self.getTranslate(str(id_))
-        rodzaj = "LIVE" if data.get("type_", "MOVIE") == "LIVE" else "MOVIE";
+        rodzaj = "LIVE" if data.get("type_", "MOVIE") == "LIVE" else "MOVIE"
 
         HEADERSz = {
             'Authorization': 'Basic',
@@ -759,16 +775,14 @@ class PLAYERPL(object):
             'Host': 'player.pl',
             'X-NewRelic-ID': 'VQEOV1JbABABV1ZaBgMDUFU=',
         }
-
         urlk = 'https://player.pl/playerapi/product/%s/player/configuration' % id_
         data = getRequests(urlk, headers=HEADERSz, params=self.params(type=rodzaj))
 
         try:
             vidsesid = data["videoSession"]["videoSessionId"]
-            prolongvidses = data["prolongVideoSessionUrl"]
-        except:
-            vidsesid=False
-            pass
+            # prolongvidses = data["prolongVideoSessionUrl"]
+        except Exception:
+            vidsesid = False
 
         PARAMS = {'type': rodzaj, 'platform': PF}
         data = getRequests(self.api_base+'item/%s/playlist' % id_, headers=HEADERSz, params=PARAMS)
@@ -885,17 +899,19 @@ class PLAYERPL(object):
             play_item.setProperty('inputstream.adaptive.stream_headers', urlencode(HEADERSz))
         xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
 
-    def slug_data(self, idslug, maxResults=True, plOnly=False):
+    def slug_data(self, idslug, maxResults=True, plOnly=False, sort='createdAt', params=None):
         xbmc.log('PLAYER.PL: slug %s started' % idslug, xbmc.LOGWARNING)
         gid, slug = idslug.split(':')
         PARAMS = self.params(maxResults=maxResults)
         PARAMS['category[]'] = slug
-        PARAMS['sort'] = 'createdAt'
+        PARAMS['sort'] = sort
         PARAMS['order'] = 'desc'
         if gid:
             PARAMS['genreId[]'] = gid
         if plOnly:
             PARAMS['vodFilter[]'] = 'POLISH'
+        if params:
+            PARAMS.update(params)
         urlk = self.PRODUCTVODLIST
         data = getRequests3(urlk, headers=self.HEADERS2, params=PARAMS)
         xbmc.log('PLAYER.PL: slug %s done' % idslug, xbmc.LOGWARNING)
@@ -972,8 +988,8 @@ class PLAYERPL(object):
             # or it's on myslit, it's means it is in pay plan
             or vod.get('id') in self.mylist)
 
-    def add_media_item(self, mud, vid, meta=None, suffix=None, folder=False, isPlayable=None,
-                       vod=None, linkdata=None):
+    def add_media_item(self, mud, vid, meta=None, prefix=None, suffix=None, folder=False, isPlayable=None,
+                       vod=None, linkdata=None, label2=None, info=None):
         """
         Add default media item to xbmc.list.
         if `isPlayable` is None (default) it's forced to `not folder`,
@@ -985,6 +1001,8 @@ class PLAYERPL(object):
                 return
         if meta is None and vod is not None:
             meta = self.get_meta_data(vod)
+        if meta is None:
+            meta = MetaDane('', '', '', '', '')  # tytul opis foto sezon epizod
         allowed = (meta and meta.allowed is True) or vid in self.mylist
         if allowed or not self.skip_unaviable:
             no_playable = not (mud or '').strip() or meta.sezon
@@ -1002,7 +1020,7 @@ class PLAYERPL(object):
                 if sched and sched[0].get('type') == 'SOON':
                     suffix += u' [COLOR gray] [LIGHT] (od %s)[/LIGHT][/COLOR]' % sched[0]['till'][:-3]
             suffix = suffix or ''
-            title = PLchar(meta.tytul, suffix, sep='')
+            title = PLchar(prefix or '', meta.tytul, suffix, sep='')
             descr = PLchar(meta.opis or meta.tytul, suffix, sep='\n')
             info = {
                 'title': title,
@@ -1011,10 +1029,36 @@ class PLAYERPL(object):
                 'tagline': descr,
                 # 'genre': 'Nawalanka',  # this is shown in Arctic: Zephyr 2 - Resurrection Mod
             }
+            if info:
+                info.update(info)
             add_item(str(vid), title, meta.foto or ADDON_ICON, mud,
                      folder=folder, isPlayable=isPlayable, infoLabels=info, art=meta.art,
-                     linkdata=linkdata)
+                     linkdata=linkdata, label2=label2)
             self._precessed_vid_list.add(vid)
+
+    def process_list(self, vod_list, subitem=None):
+        # WIP !!!
+        """
+        Process list of VOD items.
+        Check if playable or serial. Add items to Kodi list.
+        """
+        for vod in vod_list:
+            if subitem:
+                vod = vod[subitem]
+            vid = vod['id']
+            meta = self.get_meta_data(vod)
+            mud, fold = ' ', None
+            if meta.allowed is True:
+                if vod['type'] == 'SERIAL':
+                    mud = 'listcategSerial'
+                    fold = True
+                elif vod['type'] == 'SECTION':
+                    mud = 'listcategSerial'
+                    fold = True
+                else:
+                    mud = 'playvid'
+                    fold = False
+            self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
 
     def process_vod_list(self, vod_list, subitem=None):
         """
@@ -1038,7 +1082,7 @@ class PLAYERPL(object):
 
     def listCollection(self):
         self.refreshTokenTVN()
-        data = getRequests('https://player.pl/playerapi/product/section/list',
+        data = getRequests(self.SECTIONLIST,
                            headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'))
         mud = "listcollectContent"
         for vod in data:
@@ -1329,9 +1373,6 @@ if __name__ == '__main__':
 
     if not mode:
         home()
-        setView('tvshows')
-        # xbmcplugin.setContent(addon_handle, 'tvshows')
-        xbmcplugin.endOfDirectory(addon_handle)
 
     elif mode == "content":
         PLAYERPL().content()
