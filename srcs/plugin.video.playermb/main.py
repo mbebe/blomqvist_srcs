@@ -498,12 +498,14 @@ def historyDel(entry):
 def historyClear():
     addon_data.remove('history.items')
 
+
 def generate_m3u():
-    if M3UFILE == '' or M3UPATH == '':
+    if not M3UFILE or not M3UPATH:
         xbmcgui.Dialog().notification('Player', 'Ustaw nazwe pliku oraz katalog docelowy.', xbmcgui.NOTIFICATION_ERROR)
         return
-    PLAYERPL().refreshTokenTVN()
-    if not PLAYERPL().LOGGED == 'true':
+    playerpl = PLAYERPL()
+    playerpl.refreshTokenTVN()
+    if playerpl.LOGGED != 'true':
         xbmcgui.Dialog().notification('Player', 'Przed wygenerowaniem listy należy się zalogować!', xbmcgui.NOTIFICATION_ERROR)
         return
     xbmcgui.Dialog().notification('Player', 'Generuje liste M3U.', xbmcgui.NOTIFICATION_INFO)
@@ -511,8 +513,8 @@ def generate_m3u():
     tvList = PLAYERPL().getTvList()
     for item in tvList:
         if PLAYERPL().is_allowed(item):
-            id=item['id']
-            title=item['title']
+            id = item['id']
+            title = item['title']
             img = item['images']['pc'][0]['mainUrl']
             img = 'https:' + img if img.startswith('//') else img
             data += '#EXTINF:-1 tvg-logo="%s",%s\nplugin://plugin.video.playermb?mode=playm3u&channelid=%s\n' % (img, title, id)
@@ -520,6 +522,7 @@ def generate_m3u():
     f.write(data.encode('utf-8'))
     f.close()
     xbmcgui.Dialog().notification('Player', 'Wygenerowano liste M3U.', xbmcgui.NOTIFICATION_INFO)
+
 
 class PLAYERPL(object):
 
@@ -1260,6 +1263,7 @@ class PLAYERPL(object):
             reqargs['genreId[]'] = str(genre)
         data = getRequests(urlk, headers=self.HEADERS2, params=self.params(**reqargs))
         return data
+
     def getTvs(self, genre=None):
         data = self.getTvList(genre)
         out = []
