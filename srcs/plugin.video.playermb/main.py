@@ -106,6 +106,8 @@ CACHEPATH = os.path.join(DATAPATH, 'cache')
 RESOURCES = os.path.join(PATH, 'resources')
 COOKIEFILE = os.path.join(DATAPATH, 'player.cookie')
 SUBTITLEFILE = os.path.join(DATAPATH, 'temp.sub')
+M3UFILE = addon.getSetting('m3u_fname')
+M3UPATH = addon.getSetting('m3u_path')
 MEDIA = os.path.join(RESOURCES, 'media')
 
 ADDON_ICON = os.path.join(RESOURCES, '../icon.png')
@@ -496,6 +498,28 @@ def historyDel(entry):
 def historyClear():
     addon_data.remove('history.items')
 
+def generate_m3u():
+    if M3UFILE == '' or M3UPATH == '':
+        xbmcgui.Dialog().notification('Player', 'Ustaw nazwe pliku oraz katalog docelowy.', xbmcgui.NOTIFICATION_ERROR)
+        return
+    PLAYERPL().refreshTokenTVN()
+    if not PLAYERPL().LOGGED == 'true':
+        xbmcgui.Dialog().notification('Player', 'Przed wygenerowaniem listy należy się zalogować!', xbmcgui.NOTIFICATION_ERROR)
+        return
+    xbmcgui.Dialog().notification('Player', 'Generuje liste M3U.', xbmcgui.NOTIFICATION_INFO)
+    data = '#EXTM3U\n'
+    tvList = PLAYERPL().getTvList()
+    for item in tvList:
+        if PLAYERPL().is_allowed(item):
+            id=item['id']
+            title=item['title']
+            img = item['images']['pc'][0]['mainUrl']
+            img = 'https:' + img if img.startswith('//') else img
+            data += '#EXTINF:-1 tvg-logo="%s",%s\nplugin://plugin.video.playermb?mode=playm3u&channelid=%s\n' % (img, title, id)
+    f = xbmcvfs.File(M3UPATH + M3UFILE, 'w')
+    f.write(data.encode('utf-8'))
+    f.close()
+    xbmcgui.Dialog().notification('Player', 'Wygenerowano liste M3U.', xbmcgui.NOTIFICATION_INFO)
 
 class PLAYERPL(object):
 
@@ -1228,14 +1252,17 @@ class PLAYERPL(object):
             xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
 
-    def getTvs(self, genre=None):
+    def getTvList(self, genre=None):
         self.refreshTokenTVN()
         urlk = 'https://player.pl/playerapi/product/live/list'
-        out = []
         reqargs = {}
         if genre:
             reqargs['genreId[]'] = str(genre)
         data = getRequests(urlk, headers=self.HEADERS2, params=self.params(**reqargs))
+        return data
+    def getTvs(self, genre=None):
+        data = self.getTvList(genre)
+        out = []
         for dd in data:
             vid = dd['id']
             tyt = PLchar(dd['title'])
@@ -1547,6 +1574,12 @@ if __name__ == '__main__':
 
     elif mode=='playvid':
         PLAYERPL().playvid(exlink)
+
+    elif mode=='playm3u':
+        PLAYERPL().playvid(params.get('channelid'))
+
+    elif mode=='buildm3u':
+        generate_m3u()
 
     elif mode=='login':
 
