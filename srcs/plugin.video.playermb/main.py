@@ -578,6 +578,7 @@ class PLAYERPL(object):
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
         self.skip_unaviable = get_bool('avaliable_only')
         self.auto_categories = get_bool('auto_categories')
+        self.categories_without_genres = addon.getSetting('categories_without_genres').split(',')
         self.fix_api = get_bool('fix_api')
         self.remove_duplicates = get_bool('remove_duplicates')
         self.partial_size = int(addon.getSetting('partial_size') or 1000)
@@ -592,6 +593,8 @@ class PLAYERPL(object):
         self.days_ago = int(addon.getSetting('days_ago') or 31)
         if not self.days_ago:
             self.days_ago = 31
+
+        self.all_items_title = '[B]Wszystkie[/B]'
 
     def params(self, maxResults=False, **kwargs):
         """
@@ -1321,7 +1324,7 @@ class PLAYERPL(object):
                 dane = getRequests(url='https://player.pl/playerapi/item/category/%s/genre/list' % gid,
                                    headers=self.HEADERS2, params=self.params())
             if self.skip_unaviable:
-                dane.append({'id': '', 'name': '[B]Wszystkie[/B]', '_props_': {'SpecialSort': 'top'}})
+                dane.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
             for f in dane:
                 name = f['name']
                 urlk = '%s:%s' % (f['id'], slug)
@@ -1357,12 +1360,16 @@ class PLAYERPL(object):
         """Get root categories (main menu)."""
         for item in self.category_tree:
             if item.get('genres') and item['slug'] not in slug_blacklist:
+                cid = item['id']
                 slug = item['slug']
                 name = item['name']
                 image = (item.get('image', {}).get('smart_tv') or [{}])[0].get('mainUrl')
-                url = '%s:%s' % (item['id'], slug)
+                url = '%s:%s' % (cid, slug)
                 if slug == 'eurosport':  # special case
                     add_item(url, name, image=image, mode='eurosport', folder=True)
+                elif slug in self.categories_without_genres:
+                    add_item(':%s' % slug, name, image=None, mode='listcategContent', folder=True, isPlayable=False,
+                             fallback_image=None)
                 else:
                     add_item(url, name, image=image, mode='category_genre_list', folder=True)
 
@@ -1386,7 +1393,7 @@ class PLAYERPL(object):
             raise ValueError('cennot find category in category_genre_list(%r)' % exlink)
         genres = category['genres']
         if len(genres) > 1:
-            genres.append({'id': '', 'name': '[B]Wszystkie[/B]', '_props_': {'SpecialSort': 'top'}})
+            genres.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
         for item in genres:
             xbmc.log('PLAYER.PL: XXXXXXX %s: %r' % (type(item), item), xbmc.LOGWARNING)
             name = item['name']
@@ -1511,6 +1518,21 @@ class PLAYERPL(object):
         xbmcplugin.endOfDirectory(addon_handle, succeeded=True, cacheToDisc=False)
 
 
+def addon_settings(name=None, **kwargs):
+    xbmc.log('PLAYER.PL: addon_settings(%r, %r)' % (name, kwargs), xbmc.LOGWARNING)
+    if name == 'categories_without_genres':
+        Category = namedtuple('Category', 'name slug on')
+        playerpl = PLAYERPL()
+        categories = [Category(item['name'], item['slug'], item['slug'] in playerpl.categories_without_genres)
+                      for item in playerpl.category_tree
+                      if item.get('genres') and item['slug'] not in slug_blacklist]
+        dialog = xbmcgui.Dialog()
+        ret = dialog.multiselect("Kategorie zawsze pokazujące od razu wszystkie materiały,\nbez podziału na gatunki.",
+                                 [c.name for c in categories],
+                                 preselect=[i for i, c in enumerate(categories) if c.on])
+        addon.setSetting('categories_without_genres', ','.join(c.slug for i, c in enumerate(categories) if i in ret))
+
+
 if __name__ == '__main__':
 
     mode = params.get('mode', None)
@@ -1591,6 +1613,9 @@ if __name__ == '__main__':
     elif mode=='buildm3u':
         generate_m3u()
 
+    elif mode == 'settings':
+        addon_settings(**params)
+
     elif mode=='login':
 
         set_setting('logged', 'true')
@@ -1599,6 +1624,7 @@ if __name__ == '__main__':
 
     elif mode=='opcje':
         addon.openSettings()
+        xbmc.executebuiltin('Container.Refresh()')
 
 
     elif mode=='logout':
