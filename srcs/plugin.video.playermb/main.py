@@ -312,8 +312,10 @@ def home():
     playerpl.sprawdzenie1()
     playerpl.sprawdzenie2()
     add_item('', '[B][COLOR khaki]Ulubione[/COLOR][/B]', ADDON_ICON, "favors", folder=True)
-    playerpl.root()
-    # getmenu()
+    if playerpl.auto_categories:
+        playerpl.root()
+    else:
+        getmenu()
     add_item('', 'Kolekcje', ADDON_ICON, "collect", folder=True)
     add_item('', '[B][COLOR khaki]Szukaj[/COLOR][/B]', ADDON_ICON, "search", folder=True)
     add_item('', '[B][COLOR blue]Opcje[/COLOR][/B]', ADDON_ICON, "opcje", folder=False)
@@ -575,6 +577,7 @@ class PLAYERPL(object):
 
         self.MYLIST_CACHE_TIMEOUT = 3 * 3600  # cache valid time for mylist: 3h
         self.skip_unaviable = get_bool('avaliable_only')
+        self.auto_categories = get_bool('auto_categories')
         self.fix_api = get_bool('fix_api')
         self.remove_duplicates = get_bool('remove_duplicates')
         self.partial_size = int(addon.getSetting('partial_size') or 1000)
@@ -586,6 +589,9 @@ class PLAYERPL(object):
         self.dywiz = '–'
         self.hard_separator = ' '
         self.week_days = (u'poniedziałek', u'wtorek', u'środa', u'czwartek', u'piątek', u'sobota', u'niedziela')
+        self.days_ago = int(addon.getSetting('days_ago') or 31)
+        if not self.days_ago:
+            self.days_ago = 31
 
     def params(self, maxResults=False, **kwargs):
         """
@@ -1439,7 +1445,7 @@ class PLAYERPL(object):
     def eurosport_schedule(self, exlink):
         ex = ExLink.new(exlink)
         # Wyswietla menu z datami z ostatnich 7 dni (gdy wybrano transmisje wg daty i godziny)
-        for i in range(8):
+        for i in range(self.days_ago + 1):
             today = datetime.combine(date.today(), datetime.min.time())
             day = today - timedelta(days=i)
             beginTimestamp = int(1000 * time.mktime(day.timetuple()))

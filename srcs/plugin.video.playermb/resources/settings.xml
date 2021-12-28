@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-    <category label="Napisy" >
+    <category label="Ogólne" >
+        <setting id="avaliable_only" type="bool" label="Wyświetlaj tylko materiały dostępne w Twoim pakiecie" default="false" enable="true"/>
+        <setting id="auto_categories" type="bool" label="Automatyczne kategorie" default="true" enable="true"/>
+        <setting id="auto-view" type="bool" label="Automatyczny widok" default="false" enable="true"/>
+        <setting label="Napisy" type="lsep"/>
         <setting id="subtitles" type="bool" label="Wybór napisów" default="false" enable="true"/>
         <setting id="subtitles_lang_default" type="text" label="Domyślny język napisów" default="" enable="true"/>
+        <setting label="Eurosport" type="lsep"/>
+        <setting id="days_ago" type="number" label="Liczba dni wstecz" default="31" enable="true"/>
     </category>
-    <category label="AutoView" >
-        <setting id="auto-view" type="bool" label="Widok" default="false" enable="true"/>
-    </category>
-    <category label="Segregacja" >
-        <setting id="avaliable_only" type="bool" label="Dostępne dla Ciebie" default="false" enable="true"/>
-    </category>
-	<category label="Kreator listy m3u">
-		<setting label="Lista m3u (Nazwa Pliku oraz Katalog Docelowy)" type="lsep"/>
-		<setting label="Nazwa" type="text" id="m3u_fname" default="playermb.m3u" />
-		<setting label="Katalog" type="folder" id="m3u_path" source="auto" option="writeable"/>
-		<setting type="action"
-				 action="RunPlugin(plugin://plugin.video.playermb?mode=buildm3u)"
-				 label="Utwórz listę m3u"
-				 option="close" />
+    <category label="Kreator listy m3u">
+        <setting label="Lista m3u (Nazwa Pliku oraz Katalog Docelowy)" type="lsep"/>
+        <setting label="Nazwa" type="text" id="m3u_fname" default="playermb.m3u" />
+        <setting label="Katalog" type="folder" id="m3u_path" source="auto" option="writeable"/>
+        <setting type="action"
+            action="RunPlugin(plugin://$ID?mode=buildm3u)"
+            label="Utwórz listę m3u"
+            option="close" />
     </category>
     <category label="Zaawansowane" >
         <setting id="use_urllib3" type="bool" label="Ekperymentalne szybsze połączenie" default="true" enable="true"/>
