@@ -21,6 +21,7 @@
         <setting label="Lista m3u (Nazwa Pliku oraz Katalog Docelowy)" type="lsep"/>
         <setting label="Nazwa" type="text" id="m3u_fname" default="playermb.m3u" />
         <setting label="Katalog" type="folder" id="m3u_path" source="auto" option="writeable"/>
+        <setting label="Nadpisz" type="bool" id="m3u_overwrite" source="auto" option="writeable" default="true"/>
         <setting type="action"
             action="RunPlugin(plugin://$ID?mode=buildm3u)"
             label="Utwórz listę m3u"
