@@ -94,7 +94,7 @@ PF = 'ANDROID_TV'
 base_url = sys.argv[0]
 addon_handle = int(sys.argv[1])
 params = dict(parse_qsl(sys.argv[2][1:]))
-addon = xbmcaddon.Addon(id='plugin.video.playermb')
+addon = xbmcaddon.Addon()
 
 PATH = addon.getAddonInfo('path')
 try:
@@ -512,14 +512,14 @@ def generate_m3u():
         return
     xbmcgui.Dialog().notification('Player', 'Generuje liste M3U.', xbmcgui.NOTIFICATION_INFO)
     data = '#EXTM3U\n'
-    tvList = PLAYERPL().getTvList()
+    tvList = playerpl.getTvList()
     for item in tvList:
-        if PLAYERPL().is_allowed(item):
+        if playerpl.is_allowed(item):
             id = item['id']
             title = item['title']
             img = item['images']['pc'][0]['mainUrl']
             img = 'https:' + img if img.startswith('//') else img
-            data += '#EXTINF:-1 tvg-logo="%s",%s\nplugin://plugin.video.playermb?mode=playm3u&channelid=%s\n' % (img, title, id)
+            data += '#EXTINF:-1 tvg-logo="%s",%s\n%s?mode=playm3u&channelid=%s\n' % (img, title, base_url, id)
     f = xbmcvfs.File(M3UPATH + M3UFILE, 'w')
     f.write(data.encode('utf-8'))
     f.close()
@@ -1065,7 +1065,7 @@ class PLAYERPL(object):
                 'title': title,
                 'plot': descr,
                 'plotoutline': descr,
-                'tagline': descr,
+                # 'tagline': descr,  # disabled by DenDy
                 # 'genre': 'Nawalanka',  # this is shown in Arctic: Zephyr 2 - Resurrection Mod
             }
             if info:
@@ -1427,7 +1427,7 @@ class PLAYERPL(object):
     def eurosport_home(self, exlink):
         ex = ExLink.new(exlink)
         top = {'SpecialSort': 'top'}
-        add_item(':%s:schedule' % ex.slug, 'Transmisje sportowe wg daty i godziny (ostatnie 7 dni)', ADDON_ICON,
+        add_item(':%s:schedule' % ex.slug, 'Transmisje sportowe wg daty i godziny (ostatnie dni)', ADDON_ICON,
                  ex.slug, folder=True, fanart=FANART, properties=top)
         add_item(':%s:genre' % ex.slug, 'Transmisje sportowe wg dyscypliny', ADDON_ICON,
                  ex.slug, folder=True, fanart=FANART, properties=top)
@@ -1457,7 +1457,8 @@ class PLAYERPL(object):
             day = today - timedelta(days=i)
             beginTimestamp = int(1000 * time.mktime(day.timetuple()))
             endTimestamp = beginTimestamp + 1000 * 24 * 3600
-            add_item('%s:%s:time:%s:%s' % (ex.gid, ex.slug, beginTimestamp, endTimestamp), day.strftime('%Y-%m-%d, %A'),
+            name = '%s, %s' % (day.strftime('%Y-%m-%d'), self.week_days[day.weekday()])
+            add_item('%s:%s:time:%s:%s' % (ex.gid, ex.slug, beginTimestamp, endTimestamp), name,
                      ADDON_ICON, ex.slug, folder=True, fanart=FANART)
         setView('movies')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_UNSORTED)
@@ -1530,7 +1531,9 @@ def addon_settings(name=None, **kwargs):
         ret = dialog.multiselect("Kategorie zawsze pokazujące od razu wszystkie materiały,\nbez podziału na gatunki.",
                                  [c.name for c in categories],
                                  preselect=[i for i, c in enumerate(categories) if c.on])
-        addon.setSetting('categories_without_genres', ','.join(c.slug for i, c in enumerate(categories) if i in ret))
+        if ret is not None:
+            addon.setSetting('categories_without_genres', ','.join(c.slug for i, c in enumerate(categories)
+                                                                   if i in ret))
 
 
 if __name__ == '__main__':
