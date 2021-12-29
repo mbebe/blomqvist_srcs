@@ -430,6 +430,12 @@ class ThreadCall(Thread):
     def run(self):
         self.result = self.func(*self.args, **self.kwargs)
 
+    @classmethod
+    def started(cls, func, *args, **kwargs):
+        th = cls(func, *args, **kwargs)
+        th.start()
+        return th
+
 
 def idle():
 
@@ -1067,8 +1073,6 @@ class PLAYERPL(object):
                 'title': title,
                 'plot': descr,
                 'plotoutline': descr,
-                # 'tagline': descr,  # disabled by DenDy
-                # 'genre': 'Nawalanka',  # this is shown in Arctic: Zephyr 2 - Resurrection Mod
             }
             if info:
                 info.update(info)
@@ -1125,6 +1129,21 @@ class PLAYERPL(object):
         self.refreshTokenTVN()
         data = getRequests(self.SECTIONLIST,
                            headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'))
+        if self.skip_unaviable:
+            def load_content_len(sid):
+                urlk = 'https://player.pl/playerapi/product/section/%s' % (sid)
+                data = getRequests(urlk, headers=self.HEADERS2, params=self.params(maxResults=True))
+                return sum(1 for item in data.get('items', []) if self.is_allowed(item))
+
+            xbmc.log('PLAYER.PL: folder start', xbmc.LOGDEBUG)
+            self.refreshTokenTVN()
+            collections = {item['id']: ThreadCall.started(load_content_len, sid=item['id']) for item in data}
+            xbmc.log('PLAYER.PL: folder prepared', xbmc.LOGDEBUG)
+            for th in collections.values():
+                th.join()
+            xbmc.log('PLAYER.PL: folder joined', xbmc.LOGDEBUG)
+            collections = {sid: thread.result for sid, thread in collections.items()}
+            xbmc.log('PLAYER.PL: folder catch data, collections: %r' % collections, xbmc.LOGDEBUG)
         mud = "listcollectContent"
         for vod in data:
             vid = vod['id']
@@ -1134,12 +1153,17 @@ class PLAYERPL(object):
                 'title': PLchar(meta.tytul),
                 'plot': PLchar(meta.opis or meta.tytul),
             }
-            add_item(str(vid)+':'+str(slug), meta.tytul, meta.foto, mud, folder=True,
+            name = meta.tytul
+            if self.skip_unaviable:
+                count = collections.get(vid, 0)
+                fmt = u'{name} ({count})' if count else u'{name} ([COLOR red]brak[/COLOR])'
+                name = fmt.format(name=name, count=count)
+            add_item(str(vid)+':'+str(slug), name, meta.foto, mud, folder=True,
                      infoLabels=info, art=meta.art)
         setView('movies')
         # xbmcplugin.setContent(addon_handle, 'movies')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
-        xbmcplugin.endOfDirectory(addon_handle)
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
     def listFavorites(self):
         self.refreshTokenTVN()
@@ -1151,7 +1175,7 @@ class PLAYERPL(object):
             setView('tvshows')
             # xbmcplugin.setContent(addon_handle, 'tvshows')
             xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
-            xbmcplugin.endOfDirectory(addon_handle)
+            xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
         except:
             raise  # skip fallback
             # Falback: Kodi Favorites
@@ -1159,11 +1183,12 @@ class PLAYERPL(object):
 
     def listSearch(self, query):
         self.refreshTokenTVN()
-        PARAMS = self.params(keyword=query)
+        PARAMS = self.params(keyword=query, maxResults=self.MaxMax)
 
         urlk = 'https://player.pl/playerapi/product/live/search'
         lives = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
-        xbmc.log('PLAYER.PL: listSearch(%r): params=%r, lives=%r' % (query, PARAMS, lives), xbmc.LOGDEBUG)
+        xbmc.log('PLAYER.PL: listSearch(%r): params=%r, #live=%r' % (query, PARAMS, len(lives.get('items', []))),
+                 xbmc.LOGINFO)
         lives = lives['items']
         # -- commented out, it does do nothing   (rysson)
         # if len(lives)>0:
@@ -1171,11 +1196,13 @@ class PLAYERPL(object):
         #         ac=''
         urlk = 'https://player.pl/playerapi/product/vod/search'
         data = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
+        xbmc.log('PLAYER.PL: listSearch(%r): params=%r, #vod=%r' % (query, PARAMS, len(data.get('items', []))),
+                 xbmc.LOGINFO)
         self.process_vod_list(data['items'])
         # setView('tvshows')
         xbmcplugin.setContent(addon_handle, 'videos')
-        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
-        xbmcplugin.endOfDirectory(addon_handle)
+        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
     def listEpizody(self, tytsezid):
         idmain, idsezon = tytsezid.split(':')
@@ -1566,13 +1593,13 @@ if __name__ == '__main__':
 
     elif mode == "listcategSerial":
         PLAYERPL().listCategSerial(exlink)
+
     elif mode == "listEpizody":
         PLAYERPL().listEpizody(exlink)
 
     elif mode == 'search.it':
-        query = exlink
-        if query:
-            PLAYERPL().listSearch(query)
+        if exlink:
+            PLAYERPL().listSearch(exlink)
 
     elif mode == 'search':
         add_item('', '[COLOR khaki][B]Nowe szukanie[/B][/COLOR]', image=None, mode='search.new',
@@ -1610,37 +1637,36 @@ if __name__ == '__main__':
 
     elif mode == 'favors':
         PLAYERPL().listFavorites()
+
     elif mode == "collect":
         PLAYERPL().listCollection()
 
     elif mode == "listcollectContent":
         PLAYERPL().listCollectContent(exlink)
 
-    elif mode=='playvid':
+    elif mode == 'playvid':
         PLAYERPL().playvid(exlink)
 
-    elif mode=='playm3u':
+    elif mode == 'playm3u':
         PLAYERPL().playvid(params.get('channelid'))
 
-    elif mode=='buildm3u':
+    elif mode == 'buildm3u':
         generate_m3u()
 
     elif mode == 'settings':
         addon_settings(**params)
 
-    elif mode=='login':
+    elif mode == 'login':
 
         set_setting('logged', 'true')
         PLAYERPL().LOGGED = addon.getSetting('logged')
         xbmc.executebuiltin('Container.Refresh()')
 
-    elif mode=='opcje':
+    elif mode == 'opcje':
         addon.openSettings()
         xbmc.executebuiltin('Container.Refresh()')
 
-
-    elif mode=='logout':
-
+    elif mode == 'logout':
         yes = xbmcgui.Dialog().yesno("[COLOR orange]Uwaga[/COLOR]", 'Wylogowanie spowoduje konieczność ponownego wpisania kodu na stronie.[CR]Jesteś pewien?',yeslabel='TAK', nolabel='NIE')
         if yes:
             set_setting('refresh_token', '')
