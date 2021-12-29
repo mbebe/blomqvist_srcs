@@ -2,17 +2,20 @@
 <settings>
     <category label="Ogólne" >
         <setting id="avaliable_only" type="bool" label="Wyświetlaj tylko materiały dostępne w Twoim pakiecie" default="false" enable="true"/>
+        <setting label="Kategorie" type="lsep"/>
         <setting id="auto_categories" type="bool" label="Automatyczne kategorie" default="true" enable="true"/>
         <setting id="categories_without_genres_call" type="action" label="Ustaw gatunki w kategoriach"
             action="RunPlugin(plugin://$ID?mode=settings&amp;name=categories_without_genres)"
             enable="eq(-1,true)" />
-        <setting id="categories_without_genres" type="text" label="Ignoruj gatunki w kategoriach" default="live" visible="false"/>
+        <setting id="categories_without_genres" type="text" label="Ignoruj gatunki w kategoriach" visible="false"
+            default="live,big-brother,motortrend,hotel-paradise"/>
         <setting id="auto-view" type="bool" label="Automatyczny widok" default="false" enable="true"/>
         <setting label="Napisy" type="lsep"/>
         <setting id="subtitles" type="bool" label="Wybór napisów" default="false" enable="true"/>
         <setting id="subtitles_lang_default" type="text" label="Domyślny język napisów" default="" enable="true"/>
         <setting label="Eurosport" type="lsep"/>
         <setting id="days_ago" type="number" label="Liczba dni wstecz" default="31" enable="true"/>
+        <setting id="hide_soon" type="bool" label="Ukrywaj przyszłe transmisje" default="true" enable="true"/>
     </category>
     <category label="Kreator listy m3u">
         <setting label="Lista m3u (Nazwa Pliku oraz Katalog Docelowy)" type="lsep"/>

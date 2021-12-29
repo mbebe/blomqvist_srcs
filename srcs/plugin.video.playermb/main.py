@@ -48,7 +48,8 @@ else:
     def save_ints(path, seq):
         if seq:
             with open(path, 'wb') as f:
-                f.write(struct.pack('=%sQ' % len(seq), *seq))
+                if seq:
+                    f.write(struct.pack('=%sQ' % len(seq), *seq))
 
     def load_ints(path):
         with open(path, 'rb') as f:
@@ -352,7 +353,7 @@ def deunicode_params(params):
 
 def _getRequests(url, data=None, headers=None, params=None):
     xbmc.log('PLAYER.PL: getRequests(%r, data=%r, headers=%r, params=%r)'
-             % (url, data, headers, params), xbmc.LOGWARNING)
+             % (url, data, headers, params), xbmc.LOGINFO)
     params = deunicode_params(params)
     if data:
         if headers.get('Content-Type', '').startswith('application/json'):
@@ -367,7 +368,7 @@ def _getRequests(url, data=None, headers=None, params=None):
 def _getRequests3(url, data=None, headers=None, params=None):
     # urllib3 seems to be faster in some cases
     xbmc.log('PLAYER.PL: getRequests3(%r, data=%r, headers=%r, params=%r)'
-             % (url, data, headers, params), xbmc.LOGWARNING)
+             % (url, data, headers, params), xbmc.LOGINFO)
     if params:
         params = deunicode_params(params)
         encoded_args = urlencode(params)
@@ -589,6 +590,7 @@ class PLAYERPL(object):
         self._precessed_vid_list = set()
         self.dywiz = '–'
         self.hard_separator = ' '
+        self.hide_soon = get_bool('hide_soon')
         self.week_days = (u'poniedziałek', u'wtorek', u'środa', u'czwartek', u'piątek', u'sobota', u'niedziela')
         self.days_ago = int(addon.getSetting('days_ago') or 31)
         if not self.days_ago:
@@ -829,7 +831,7 @@ class PLAYERPL(object):
             PARAMS = {'type': rodzaj, 'platform': UA, 'videoSessionId': vidsesid}
             data = getRequests(urlk, headers=HEADERSz, PARAMS=PARAMS)
 
-        xbmc.log('PLAYER.PL: getPlaylist(%r): data: %r' % (id_, data), xbmc.LOGWARNING)
+        xbmc.log('PLAYER.PL: getPlaylist(%r): data: %r' % (id_, data), xbmc.LOGINFO)
         vid = data['movie']
         outsub = []
         try:
@@ -939,7 +941,7 @@ class PLAYERPL(object):
         xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
 
     def slug_data(self, idslug, maxResults=True, plOnly=False, sort='createdAt', params=None):
-        xbmc.log('PLAYER.PL: slug %s started' % idslug, xbmc.LOGWARNING)
+        xbmc.log('PLAYER.PL: slug %s started' % idslug, xbmc.LOGDEBUG)
         gid, slug = idslug.split(':')
         PARAMS = self.params(maxResults=maxResults)
         PARAMS['category[]'] = slug
@@ -953,7 +955,7 @@ class PLAYERPL(object):
             PARAMS.update(params)
         urlk = self.PRODUCTVODLIST
         data = getRequests3(urlk, headers=self.HEADERS2, params=PARAMS)
-        xbmc.log('PLAYER.PL: slug %s done' % idslug, xbmc.LOGWARNING)
+        xbmc.log('PLAYER.PL: slug %s done' % idslug, xbmc.LOGDEBUG)
         return data
 
     def async_slug_data(self, idslug, maxResults=True, plOnly=False):
@@ -962,10 +964,10 @@ class PLAYERPL(object):
         return thread
 
     def get_mylist(self):
-        xbmc.log('PLAYER.PL: mylist started', xbmc.LOGWARNING)
+        xbmc.log('PLAYER.PL: mylist started', xbmc.LOGDEBUG)
         data = getRequests3('https://player.pl/playerapi/subscriber/product/available/list?4K=true&platform=ANDROID_TV',
                             headers=self.HEADERS2, params={})
-        xbmc.log('PLAYER.PL: mylist done', xbmc.LOGWARNING)
+        xbmc.log('PLAYER.PL: mylist done', xbmc.LOGDEBUG)
         return set(data)
 
     @property
@@ -1035,7 +1037,7 @@ class PLAYERPL(object):
         because folder is not playable.
         """
         if vid in self._precessed_vid_list:
-            xbmc.log(u'PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGWARNING)
+            xbmc.log(u'PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGINFO)
             if self.remove_duplicates:
                 return
         if meta is None and vod is not None:
@@ -1161,7 +1163,7 @@ class PLAYERPL(object):
 
         urlk = 'https://player.pl/playerapi/product/live/search'
         lives = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
-        xbmc.log('PLAYER.PL: listSearch(%r): params=%r, lives=%r' % (query, PARAMS, lives), xbmc.LOGWARNING)
+        xbmc.log('PLAYER.PL: listSearch(%r): params=%r, lives=%r' % (query, PARAMS, lives), xbmc.LOGDEBUG)
         lives = lives['items']
         # -- commented out, it does do nothing   (rysson)
         # if len(lives)>0:
@@ -1254,11 +1256,14 @@ class PLAYERPL(object):
         if slug == 'live':
             dane = self.getTvs(genre=gid)
             for f in dane:
-                add_item(name=f.get('title'), url=f.get('url'), mode='playvid', image=f.get('img'),
+                add_item(name=f.get('title'), url=f.get('url'), mode='playvid', image=f.get('img', FANART),
                          folder=False, isPlayable=True, infoLabels=f)
         else:
             data = self.slug_data(idslug, maxResults=True if gid else self.MaxMax)
-            self.process_vod_list(data['items'])
+            data = data['items']
+            if self.hide_soon and slug == 'eurosport':
+                data = self.skip_soon_vod_iter(data)
+            self.process_vod_list(data)
             setView('tvshows')
             # xbmcplugin.setContent(int(sys.argv[1]), 'tvshows')
             xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
@@ -1301,23 +1306,23 @@ class PLAYERPL(object):
                          folder=False, isPlayable=True, infoLabels=f)
         else:
             if self.skip_unaviable:
-                xbmc.log('PLAYER.PL: folder start', xbmc.LOGWARNING)
+                xbmc.log('PLAYER.PL: folder start', xbmc.LOGDEBUG)
                 self.refreshTokenTVN()
                 mylist_thread = ThreadCall(self.load_mylist)
                 mylist_thread.start()
                 slugs = {sid: self.async_slug_data(sid, maxResults=self.MaxMax) for f in serialemenu[gid]
                          for sid in ('%s:%s' % (f['id'], slug),)}
                 slugs[':%s' % slug] = self.async_slug_data(':%s' % slug, maxResults=self.MaxMax)
-                xbmc.log('PLAYER.PL: folder prepared', xbmc.LOGWARNING)
+                xbmc.log('PLAYER.PL: folder prepared', xbmc.LOGDEBUG)
                 for th in slugs.values():
                     th.join()
                 mylist_thread.join()
-                xbmc.log('PLAYER.PL: folder joined', xbmc.LOGWARNING)
+                xbmc.log('PLAYER.PL: folder joined', xbmc.LOGDEBUG)
                 mylist = mylist_thread.result
                 slugs = {sid: thread.result['items'] for sid, thread in slugs.items()}
                 xbmc.log('PLAYER.PL: folder catch data', xbmc.LOGWARNING)
                 if not mylist:
-                    xbmc.log('PLAYER.PL: XXX: mylist=%r' % mylist, xbmc.LOGWARNING)
+                    xbmc.log('PLAYER.PL: mylist=%r' % mylist, xbmc.LOGERROR)
             try:
                 dane = serialemenu[gid]
             except KeyError:
@@ -1358,18 +1363,23 @@ class PLAYERPL(object):
 
     def category_list(self, exlink=None):
         """Get root categories (main menu)."""
-        for item in self.category_tree:
+        category_tree = self.category_tree
+        catimages = {}
+        for item in category_tree:
+            image = (item.get('images', {}).get('smart_tv') or [{}])[0].get('mainUrl')
+            if image:
+                catimages[item['slug']] = image
+        for item in category_tree:
             if item.get('genres') and item['slug'] not in slug_blacklist:
                 cid = item['id']
                 slug = item['slug']
                 name = item['name']
-                image = (item.get('image', {}).get('smart_tv') or [{}])[0].get('mainUrl')
+                image = catimages.get(slug)
                 url = '%s:%s' % (cid, slug)
                 if slug == 'eurosport':  # special case
                     add_item(url, name, image=image, mode='eurosport', folder=True)
                 elif slug in self.categories_without_genres:
-                    add_item(':%s' % slug, name, image=None, mode='listcategContent', folder=True, isPlayable=False,
-                             fallback_image=None)
+                    add_item(':%s' % slug, name, image=image, mode='listcategContent', folder=True, isPlayable=False)
                 else:
                     add_item(url, name, image=image, mode='category_genre_list', folder=True)
 
@@ -1395,7 +1405,7 @@ class PLAYERPL(object):
         if len(genres) > 1:
             genres.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
         for item in genres:
-            xbmc.log('PLAYER.PL: XXXXXXX %s: %r' % (type(item), item), xbmc.LOGWARNING)
+            xbmc.log('PLAYER.PL: category_genre_list: %s: %r' % (type(item), item), xbmc.LOGDEBUG)
             name = item['name']
             url = '%s:%s' % (item['id'], slug)
             # if self.skip_unaviable:
@@ -1412,7 +1422,6 @@ class PLAYERPL(object):
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
                                  label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle, succeeded=True, cacheToDisc=False)
-        xbmc.log('PLAYER.PL: ZZZZZZZ handle=%r, args=%r' % (addon_handle, sys.argv), xbmc.LOGWARNING)
 
     def skip_soon_vod_iter(self, lst):
         return (vod for vod in lst if (vod.get('displaySchedules') or [{}])[0].get('type') != 'SOON')
@@ -1445,8 +1454,8 @@ class PLAYERPL(object):
             tytul = PLchar(item["title"].capitalize())
             add_item('%s:%s' % (gid, slug), tytul, foto, "listcollectContent", folder=True, fanart=FANART)
         setView('movies')
-        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
-                                 label2Mask="%R, %Y, %P")
+        # xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
+        #                          label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle, succeeded=True, cacheToDisc=False)
 
     def eurosport_schedule(self, exlink):
@@ -1528,7 +1537,7 @@ def addon_settings(name=None, **kwargs):
                       for item in playerpl.category_tree
                       if item.get('genres') and item['slug'] not in slug_blacklist]
         dialog = xbmcgui.Dialog()
-        ret = dialog.multiselect("Kategorie zawsze pokazujące od razu wszystkie materiały,\nbez podziału na gatunki.",
+        ret = dialog.multiselect("Kategorie bez podziału na gatunki",
                                  [c.name for c in categories],
                                  preselect=[i for i, c in enumerate(categories) if c.on])
         if ret is not None:
