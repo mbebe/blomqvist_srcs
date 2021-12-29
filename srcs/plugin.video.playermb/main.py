@@ -110,7 +110,7 @@ COOKIEFILE = os.path.join(DATAPATH, 'player.cookie')
 SUBTITLEFILE = os.path.join(DATAPATH, 'temp.sub')
 M3UFILE = addon.getSetting('m3u_fname')
 M3UPATH = addon.getSetting('m3u_path')
-M3UOVERWRITE = addon.getSetting('m3u_overwrite')
+M3UOVERWRITE = addon.getSettingBool('m3u_overwrite')
 MEDIA = os.path.join(RESOURCES, 'media')
 
 ADDON_ICON = os.path.join(RESOURCES, '../icon.png')
@@ -514,7 +514,7 @@ def generate_m3u():
         xbmcgui.Dialog().notification('Player', 'Przed wygenerowaniem listy należy się zalogować!', xbmcgui.NOTIFICATION_ERROR)
         return
     xbmcgui.Dialog().notification('Player', 'Generuje liste M3U.', xbmcgui.NOTIFICATION_INFO)
-    data = '#EXTM3U\n' if M3UOVERWRITE == 'true' else '\n'
+    data = '#EXTM3U\n' if M3UOVERWRITE else '\n'
     tvList = playerpl.getTvList()
     for item in tvList:
         if playerpl.is_allowed(item):
@@ -523,7 +523,7 @@ def generate_m3u():
             img = item['images']['pc'][0]['mainUrl']
             img = 'https:' + img if img.startswith('//') else img
             data += '#EXTINF:-1 tvg-logo="%s",%s\n%s?mode=playm3u&channelid=%s\n' % (img, title, base_url, id)
-    openMode = 'w' if M3UOVERWRITE == 'true' else 'a'
+    openMode = 'w' if M3UOVERWRITE else 'a'
     with io.open(M3UPATH + M3UFILE, mode=openMode, encoding="utf-8") as f:
         f.write(data)
     xbmcgui.Dialog().notification('Player', 'Wygenerowano liste M3U.', xbmcgui.NOTIFICATION_INFO)
