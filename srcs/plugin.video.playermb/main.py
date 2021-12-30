@@ -1593,12 +1593,20 @@ class PLAYERPL(object):
     def eurosport_list(self, exlink):
         ex = ExLink.new(exlink)
         data = self.slug_data('%s:%s' % (ex.gid, ex.slug), maxResults=0, sort='airingSince')
-        for vod in data['items']:
-            times = '[%s]%s' % (vod['airingSince'].rpartition(':')[0], self.hard_separator)
-            self.add_media_item('playvid', vod['id'], vod=vod, prefix=times,
-                                info={'duration': vod['duration']})
+        data = data['items']
+        if self.hide_soon:
+            data = self.skip_soon_vod_iter(data)
+        for vod in data:
+            times = vod.get('since', '--:--')
+            times = vod.get('displaySchedules', [{}])[0].get('since', times)
+            times = vod.get('airingSince', times)
+            times = '[%s]%s' % (times.rpartition(':')[0], self.hard_separator)
+            info = {}
+            if 'duration' in vod:
+                info['duration'] = vod['duration']
+            self.add_media_item('playvid', vod['id'], vod=vod, prefix=times, info=info)
         setView('tvshows')
-        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_UNSORTED)
+        # xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_UNSORTED)
         xbmcplugin.endOfDirectory(addon_handle, succeeded=True, cacheToDisc=False)
 
 
