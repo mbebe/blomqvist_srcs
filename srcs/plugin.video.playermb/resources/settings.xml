@@ -14,6 +14,7 @@
         <setting id="subtitles" type="bool" label="Wybór napisów" default="false" enable="true"/>
         <setting id="subtitles_lang_default" type="text" label="Domyślny język napisów" default="" enable="true"/>
         <setting label="Eurosport" type="lsep"/>
+        <setting id="days_ahead" type="number" label="Liczba dni w przód" default="7" enable="true"/>
         <setting id="days_ago" type="number" label="Liczba dni wstecz" default="31" enable="true"/>
         <setting id="hide_soon" type="bool" label="Ukrywaj przyszłe transmisje" default="true" enable="true"/>
     </category>

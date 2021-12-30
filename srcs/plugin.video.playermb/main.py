@@ -656,6 +656,7 @@ class PLAYERPL(object):
         self.days_ago = int(addon.getSetting('days_ago') or 31)
         if not self.days_ago:
             self.days_ago = 31
+        self.days_ahead = int(addon.getSetting('days_ahead'))
 
         self.all_items_title = '[B]Wszystkie[/B]'
 
@@ -1510,7 +1511,7 @@ class PLAYERPL(object):
     def eurosport_home(self, exlink):
         ex = ExLink.new(exlink)
         top = {'SpecialSort': 'top'}
-        add_item(':%s:schedule' % ex.slug, 'Transmisje sportowe wg daty i godziny (ostatnie dni)', ADDON_ICON,
+        add_item(':%s:schedule' % ex.slug, 'Transmisje sportowe wg daty i godziny', ADDON_ICON,
                  ex.slug, folder=True, fanart=FANART, properties=top)
         add_item(':%s:genre' % ex.slug, 'Transmisje sportowe wg dyscypliny', ADDON_ICON,
                  ex.slug, folder=True, fanart=FANART, properties=top)
@@ -1535,12 +1536,14 @@ class PLAYERPL(object):
     def eurosport_schedule(self, exlink):
         ex = ExLink.new(exlink)
         # Wyswietla menu z datami z ostatnich 7 dni (gdy wybrano transmisje wg daty i godziny)
-        for i in range(self.days_ago + 1):
+        for i in range(- self.days_ahead, self.days_ago + 1):
             today = datetime.combine(date.today(), datetime.min.time())
             day = today - timedelta(days=i)
             beginTimestamp = int(1000 * time.mktime(day.timetuple()))
             endTimestamp = beginTimestamp + 1000 * 24 * 3600
             name = '%s, %s' % (day.strftime('%Y-%m-%d'), self.week_days[day.weekday()])
+            if i == 0:
+                name += u'[COLOR gray]   (dzisiaj)[/COLOR]'
             add_item('%s:%s:time:%s:%s' % (ex.gid, ex.slug, beginTimestamp, endTimestamp), name,
                      ADDON_ICON, ex.slug, folder=True, fanart=FANART)
         setView('movies')
@@ -1558,20 +1561,24 @@ class PLAYERPL(object):
         })
         myList = self.mylist
         xbmc.log('PLAYER.PL: ++++++ %r' % data, xbmc.LOGWARNING)
-        for item in data['items']:
-            if ( ( 'displaySchedules' in item ) and ( len(item['displaySchedules']) > 0 ) and ( item['displaySchedules'][0]['type'] != 'SOON' ) ):
-                dod=''
-                fold = False
-                playk =True
-                mud = 'playvid'
-                if item["payable"]:
-                    if item['id'] not in myList:
-                        dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
-                        playk =False
-                        mud = '   '
-                time_str = '[%s-%s]%s' % (hhmm(item['airingSince']), hhmm(item['airingTill']), self.hard_separator)
-                name = PLchar(time_str, item['title'], dod, sep='')
-                add_item(str(item['id']), name, ADDON_ICON, mud, folder=fold,isPlayable=playk,fanart=FANART)
+        for vod in data['items']:
+            # if 1:#( ( 'displaySchedules' in item ) and ( len(item['displaySchedules']) > 0 ) and ( item['displaySchedules'][0]['type'] != 'SOON' ) ):
+            #     dod=''
+            #     fold = False
+            #     playk =True
+            #     mud = 'playvid'
+            #     if item["payable"]:
+            #         if item['id'] not in myList:
+            #             dod=' - [I][COLOR khaki](brak w pakiecie)[/COLOR][/I]'
+            #             playk =False
+            #             mud = '   '
+            #     time_str = '[%s-%s]%s' % (hhmm(item['airingSince']), hhmm(item['airingTill']), self.hard_separator)
+            #     name = PLchar(time_str, item['title'], dod, sep='')
+            #     add_item(str(item['id']), name, ADDON_ICON, mud, folder=fold,isPlayable=playk,fanart=FANART)
+            info = {}
+            if 'duration' in vod:
+                info['duration'] = vod['duration']
+            self.add_media_item('playvid', vod['id'], vod=vod, prefix=self.times_prefix(vod), info=info)
         setView('tvshows')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
                                  label2Mask="%R, %Y, %P")
@@ -1597,17 +1604,31 @@ class PLAYERPL(object):
         if self.hide_soon:
             data = self.skip_soon_vod_iter(data)
         for vod in data:
-            times = vod.get('since', '--:--')
-            times = vod.get('displaySchedules', [{}])[0].get('since', times)
-            times = vod.get('airingSince', times)
-            times = '[%s]%s' % (times.rpartition(':')[0], self.hard_separator)
             info = {}
             if 'duration' in vod:
                 info['duration'] = vod['duration']
-            self.add_media_item('playvid', vod['id'], vod=vod, prefix=times, info=info)
+            self.add_media_item('playvid', vod['id'], vod=vod, prefix=self.datetime_prefix(vod), info=info)
         setView('tvshows')
         # xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_UNSORTED)
         xbmcplugin.endOfDirectory(addon_handle, succeeded=True, cacheToDisc=False)
+
+    def datetime_prefix(self, vod):
+        since = vod.get('since', '--:--')
+        since = vod.get('displaySchedules', [{}])[0].get('since', since)
+        since = vod.get('airingSince', since)
+        return '[%s]%s' % (since.rpartition(':')[0], self.hard_separator)
+
+    def times_prefix(self, vod):
+        def hhmm(s):
+            return s.partition(' ')[2].rpartition(':')[0]
+
+        since = vod.get('since', '--:--')
+        since = vod.get('displaySchedules', [{}])[0].get('since', since)
+        since = vod.get('airingSince', since)
+        till = vod.get('till', '--:--')
+        till = vod.get('displaySchedules', [{}])[0].get('till', till)
+        till = vod.get('airingTill', till)
+        return '[%s-%s]%s' % (hhmm(since), hhmm(till), self.hard_separator)
 
 
 def addon_settings(name=None, **kwargs):
