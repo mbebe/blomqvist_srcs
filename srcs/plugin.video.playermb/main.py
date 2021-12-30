@@ -4,6 +4,7 @@ import sys, re, os
 import time
 import io
 from collections import namedtuple
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 
 
@@ -110,7 +111,6 @@ COOKIEFILE = os.path.join(DATAPATH, 'player.cookie')
 SUBTITLEFILE = os.path.join(DATAPATH, 'temp.sub')
 M3UFILE = addon.getSetting('m3u_fname')
 M3UPATH = addon.getSetting('m3u_path')
-M3UOVERWRITE = addon.getSettingBool('m3u_overwrite')
 MEDIA = os.path.join(RESOURCES, 'media')
 
 ADDON_ICON = os.path.join(RESOURCES, '../icon.png')
@@ -510,7 +510,7 @@ def historyClear():
     addon_data.remove('history.items')
 
 
-def generate_m3u():
+def generate_m3u(override=True):
     if not M3UFILE or not M3UPATH:
         xbmcgui.Dialog().notification('Player', 'Ustaw nazwe pliku oraz katalog docelowy.', xbmcgui.NOTIFICATION_ERROR)
         return
@@ -520,7 +520,7 @@ def generate_m3u():
         xbmcgui.Dialog().notification('Player', 'Przed wygenerowaniem listy należy się zalogować!', xbmcgui.NOTIFICATION_ERROR)
         return
     xbmcgui.Dialog().notification('Player', 'Generuje liste M3U.', xbmcgui.NOTIFICATION_INFO)
-    data = '#EXTM3U\n' if M3UOVERWRITE else '\n'
+    data = '#EXTM3U\n' if override else '\n'
     tvList = playerpl.getTvList()
     for item in tvList:
         if playerpl.is_allowed(item):
@@ -529,10 +529,55 @@ def generate_m3u():
             img = item['images']['pc'][0]['mainUrl']
             img = 'https:' + img if img.startswith('//') else img
             data += '#EXTINF:-1 tvg-logo="%s",%s\n%s?mode=playm3u&channelid=%s\n' % (img, title, base_url, id)
-    openMode = 'w' if M3UOVERWRITE else 'a'
+    openMode = 'w' if override else 'a'
     with io.open(M3UPATH + M3UFILE, mode=openMode, encoding="utf-8") as f:
         f.write(data)
     xbmcgui.Dialog().notification('Player', 'Wygenerowano liste M3U.', xbmcgui.NOTIFICATION_INFO)
+
+
+class CountSubfolders(object):
+    """Count subfolders (avaliable items in sections) with statement object."""
+
+    def __init__(self, plugin, data, loader, kwargs):
+        self.plugin = plugin
+        self.data = data
+        self.loader = loader
+        self.kwargs = kwargs
+        self._count = None
+
+    @property
+    def count(self):
+        """Returns avaliable item count in section by section id."""
+        if self._count is None:
+            def convert(data):
+                if isinstance(data, dict):  # better is Mapping than dict, but not in this code
+                    return sum(1 for item in data.get('items', data) if self.plugin.is_allowed(item))
+                return data
+
+            # self.plugin.refreshTokenTVN()
+            xbmc.log('PLAYER.PL: count folder start', xbmc.LOGDEBUG)
+            threads = {item['id']: ThreadCall.started(self.loader, item, **self.kwargs)
+                       for item in self.data}
+            xbmc.log('PLAYER.PL: count folder prepared', xbmc.LOGDEBUG)
+            for th in threads.values():
+                th.join()
+            xbmc.log('PLAYER.PL: count folder joined', xbmc.LOGDEBUG)
+            self._count = {sid: convert(thread.result) for sid, thread in threads.items()}
+            xbmc.log('PLAYER.PL: count folder catch data: %r' % self._count, xbmc.LOGINFO)
+        return self._count
+
+    def title(self, item, title, info=None):
+        """Change title name (and title in info if not None)."""
+        if self.plugin.skip_unaviable:
+            count = self.count.get(item['id'], 0)
+            if count:
+                fmt = u'{title} [COLOR gray]({count})[/COLOR]'
+            else:
+                fmt = u'{title} [COLOR gray]([COLOR red]brak[/COLOR])[/COLOR]'
+            title = fmt.format(title=title, count=count)
+            if info is not None:
+                info['title'] = title  # K19 uses infoLabels["title"] with SORT_METHOD_TITLE
+        return title
 
 
 class PLAYERPL(object):
@@ -1029,6 +1074,15 @@ class PLAYERPL(object):
     def mylist(self):
         self.remove_mylist()
 
+    @contextmanager
+    def count_subfolders(self, data, loader, **kwargs):
+        """Count subfolders (avaliable items in sections) with statement."""
+        count = CountSubfolders(self, data, loader, kwargs)
+        try:
+            yield count
+        finally:
+            del count
+
     def is_allowed(self, vod):
         """Check if item (video, folder) is avaliable in current pay plan."""
         return (
@@ -1128,42 +1182,27 @@ class PLAYERPL(object):
             self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
 
     def listCollection(self):
+        def load_subfolders(item):
+            urlk = 'https://player.pl/playerapi/product/section/%s' % item['id']
+            return getRequests(urlk, headers=self.HEADERS2, params=self.params(maxResults=True))
+
         self.refreshTokenTVN()
         data = getRequests(self.SECTIONLIST,
                            headers=self.HEADERS2, params=self.params(maxResults=True, order='asc'))
-        if self.skip_unaviable:
-            def load_content_len(sid):
-                urlk = 'https://player.pl/playerapi/product/section/%s' % (sid)
-                data = getRequests(urlk, headers=self.HEADERS2, params=self.params(maxResults=True))
-                return sum(1 for item in data.get('items', []) if self.is_allowed(item))
-
-            xbmc.log('PLAYER.PL: folder start', xbmc.LOGDEBUG)
-            self.refreshTokenTVN()
-            collections = {item['id']: ThreadCall.started(load_content_len, sid=item['id']) for item in data}
-            xbmc.log('PLAYER.PL: folder prepared', xbmc.LOGDEBUG)
-            for th in collections.values():
-                th.join()
-            xbmc.log('PLAYER.PL: folder joined', xbmc.LOGDEBUG)
-            collections = {sid: thread.result for sid, thread in collections.items()}
-            xbmc.log('PLAYER.PL: folder catch data, collections: %r' % collections, xbmc.LOGDEBUG)
         mud = "listcollectContent"
-        for vod in data:
-            vid = vod['id']
-            slug = vod['slug']
-            meta = self.get_meta_data(vod)
-            info = {
-                'title': PLchar(meta.tytul),
-                'plot': PLchar(meta.opis or meta.tytul),
-            }
-            name = meta.tytul
-            if self.skip_unaviable:
-                count = collections.get(vid, 0)
-                fmt = u'{name} ({count})' if count else u'{name} ([COLOR red]brak[/COLOR])'
-                name = fmt.format(name=name, count=count)
-            add_item(str(vid)+':'+str(slug), name, meta.foto, mud, folder=True,
-                     infoLabels=info, art=meta.art)
+        with self.count_subfolders(data, load_subfolders) as count:
+            for i, vod in enumerate(data):
+                vid = vod['id']
+                slug = vod['slug']
+                meta = self.get_meta_data(vod)
+                info = {
+                    'title': PLchar(meta.tytul),
+                    'plot': PLchar(meta.opis or meta.tytul),
+                }
+                name = count.title(vod, meta.tytul, info)
+                add_item(str(vid)+':'+str(slug), name, meta.foto, mud, folder=True,
+                         infoLabels=info, art=meta.art)
         setView('movies')
-        # xbmcplugin.setContent(addon_handle, 'movies')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
@@ -1329,49 +1368,28 @@ class PLAYERPL(object):
         getRequests(url=self.KATEGORIE, headers=self.HEADERS2, params=self.params())
         gid, slug = idslug.split(':')
         if slug == 'live':
-            dane = self.getTvs()
-            for f in dane:
+            data = self.getTvs()
+            for f in data:
                 add_item(name=f.get('title'), url=f.get('url'), mode='playvid', image=f.get('img'),
                          folder=False, isPlayable=True, infoLabels=f)
         else:
-            if self.skip_unaviable:
-                xbmc.log('PLAYER.PL: folder start', xbmc.LOGDEBUG)
-                self.refreshTokenTVN()
-                mylist_thread = ThreadCall(self.load_mylist)
-                mylist_thread.start()
-                slugs = {sid: self.async_slug_data(sid, maxResults=self.MaxMax) for f in serialemenu[gid]
-                         for sid in ('%s:%s' % (f['id'], slug),)}
-                slugs[':%s' % slug] = self.async_slug_data(':%s' % slug, maxResults=self.MaxMax)
-                xbmc.log('PLAYER.PL: folder prepared', xbmc.LOGDEBUG)
-                for th in slugs.values():
-                    th.join()
-                mylist_thread.join()
-                xbmc.log('PLAYER.PL: folder joined', xbmc.LOGDEBUG)
-                mylist = mylist_thread.result
-                slugs = {sid: thread.result['items'] for sid, thread in slugs.items()}
-                xbmc.log('PLAYER.PL: folder catch data', xbmc.LOGWARNING)
-                if not mylist:
-                    xbmc.log('PLAYER.PL: mylist=%r' % mylist, xbmc.LOGERROR)
+            def load_subfolders(item):
+                return self.slug_data('%s:%s' % (item['id'], slug))
             try:
-                dane = serialemenu[gid]
+                data = serialemenu[gid]
             except KeyError:
-                dane = getRequests(url='https://player.pl/playerapi/item/category/%s/genre/list' % gid,
+                data = getRequests(url='https://player.pl/playerapi/item/category/%s/genre/list' % gid,
                                    headers=self.HEADERS2, params=self.params())
-            if self.skip_unaviable:
-                dane.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
-            for f in dane:
-                name = f['name']
-                urlk = '%s:%s' % (f['id'], slug)
+            with self.count_subfolders(data, load_subfolders) as count:
                 if self.skip_unaviable:
-                    xbmc.log('PLAYER.PL: ul=%s, mylist=%s, slg=%s, start counting' % (urlk, len(mylist), len(slugs[urlk])), xbmc.LOGWARNING)
-                    # count = sum(item['id'] in mylist for item in slugs[urlk])
-                    count = len({item['id'] for item in slugs[urlk]} & mylist)
-                    xbmc.log('PLAYER.PL: ul=%s, mylist=%s, slg=%s, cnt=%s' % (urlk, len(mylist), len(slugs[urlk]), count), xbmc.LOGWARNING)
-                    fmt = '{name} ({count})' if count else '{name} ([COLOR red]brak[/COLOR])'
-                    name = fmt.format(name=name, count=count)
-                image = media('genre/%s.png' % f['id'], fallback=ADDON_ICON)
-                add_item(urlk, name, image, mode='listcategContent', folder=True, isPlayable=False,
-                         properties=f.get('_props_'))
+                    data.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
+                for f in data:
+                    name = f['name']
+                    urlk = '%s:%s' % (f['id'], slug)
+                    count.title(f, name)
+                    image = media('genre/%s.png' % f['id'], fallback=ADDON_ICON)
+                    add_item(urlk, name, image, mode='listcategContent', folder=True, isPlayable=False,
+                             properties=f.get('_props_'))
 
         xbmc.log('PLAYER.PL: folder items done', xbmc.LOGWARNING)
         setView('tvshows')
@@ -1420,6 +1438,10 @@ class PLAYERPL(object):
 
     def category_genre_list(self, exlink):
         """Get ROOT folder content (main menu)."""
+        def load_subfolders(item):
+            gid = item['id']
+            return self.slug_data('%s:%s' % (gid, slug), maxResults=True if gid else self.MaxMax)
+
         try:
             cid, slug = exlink.split(':', 1)
             cid = int(cid)
@@ -1431,22 +1453,17 @@ class PLAYERPL(object):
         except StopIteration:
             raise ValueError('cennot find category in category_genre_list(%r)' % exlink)
         genres = category['genres']
-        if len(genres) > 1:
-            genres.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
-        for item in genres:
-            xbmc.log('PLAYER.PL: category_genre_list: %s: %r' % (type(item), item), xbmc.LOGDEBUG)
-            name = item['name']
-            url = '%s:%s' % (item['id'], slug)
-            # if self.skip_unaviable:
-            #     xbmc.log('PLAYER.PL: ul=%s, mylist=%s, slg=%s, start counting' % (urlk, len(mylist), len(slugs[urlk])), xbmc.LOGWARNING)
-            #     # count = sum(item['id'] in mylist for item in slugs[urlk])
-            #     count = len({item['id'] for item in slugs[urlk]} & mylist)
-            #     xbmc.log('PLAYER.PL: ul=%s, mylist=%s, slg=%s, cnt=%s' % (urlk, len(mylist), len(slugs[urlk]), count), xbmc.LOGWARNING)
-            #     fmt = '{name} ({count})' if count else '{name} ([COLOR red]brak[/COLOR])'
-            #     name = fmt.format(name=name, count=count)
-            # image = media('genre/%s.png' % item['id'], fallback=ADDON_ICON)
-            add_item(url, name, image=None, mode='listcategContent', folder=True, isPlayable=False,
-                     properties=item.get('_props_'), fallback_image=None)
+        with self.count_subfolders(genres, load_subfolders) as count:
+            if len(genres) > 1:
+                genres.append({'id': '', 'name': self.all_items_title, '_props_': {'SpecialSort': 'top'}})
+            for item in genres:
+                xbmc.log('PLAYER.PL: category_genre_list: %s: %r' % (type(item), item), xbmc.LOGDEBUG)
+                name = item['name']
+                url = '%s:%s' % (item['id'], slug)
+                name = count.title(item, name)
+                # image = media('genre/%s.png' % item['id'], fallback=ADDON_ICON)
+                add_item(url, name, image=None, mode='listcategContent', folder=True, isPlayable=False,
+                         properties=item.get('_props_'))  # , fallback_image=None)
         setView('tvshows')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
                                  label2Mask="%R, %Y, %P")
@@ -1653,7 +1670,10 @@ if __name__ == '__main__':
         PLAYERPL().playvid(params.get('channelid'))
 
     elif mode == 'buildm3u':
-        generate_m3u()
+        generate_m3u(override=True)
+
+    elif mode == 'appendm3u':
+        generate_m3u(override=False)
 
     elif mode == 'settings':
         addon_settings(**params)
