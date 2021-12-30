@@ -89,6 +89,13 @@ ExLink.beginTimestamp = property(lambda self: self.a1)
 ExLink.endTimestamp = property(lambda self: self.a2)
 
 
+class NotPlayable(Exception):
+    """Item is not playable."""
+    @property
+    def message(self):
+        return self.args[0] if self.args else ''
+
+
 UA = 'okhttp/3.3.1 Android'
 # UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:87.0) Gecko/20100101 Firefox/87.0'
 PF = 'ANDROID_TV'
@@ -603,6 +610,7 @@ class PLAYERPL(object):
         self.PRODUCTVODLIST = self.api_base + 'product/vod/list'
         self.PRODUCTLIVELIST = self.api_base + 'product/live/list'
         self.SECTIONLIST = self.api_base + 'product/section/list'
+        self.SECTION_CONTENT = self.api_base + 'product/section/{sid}'
 
         self.PARAMS = {'4K': 'true', 'platform': PF}
 
@@ -885,7 +893,13 @@ class PLAYERPL(object):
             data = getRequests(urlk, headers=HEADERSz, PARAMS=PARAMS)
 
         xbmc.log('PLAYER.PL: getPlaylist(%r): data: %r' % (id_, data), xbmc.LOGINFO)
-        vid = data['movie']
+        code = data.get('code')
+        try:
+            vid = data['movie']
+        except KeyError:
+            if code == 'ITEM_NOT_PAID':
+                raise NotPlayable('Brak w pakiecie')
+            raise
         outsub = []
         try:
             subs = vid['video']['subtitles']
@@ -935,7 +949,12 @@ class PLAYERPL(object):
                     f.write(r.content)
                 play_item.setSubtitles([SUBTITLEFILE])
 
-        stream_url, license_url, subtitles = self.getPlaylist(str(id))
+        try:
+            stream_url, license_url, subtitles = self.getPlaylist(str(id))
+        except NotPlayable as exc:
+            xbmcgui.Dialog().notification('PlayerMB', exc.message, xbmcgui.NOTIFICATION_ERROR)
+            xbmc.log('PLAYER.PL: play error: %s' % exc.message, xbmc.LOGERROR)
+            return
         subt = ''
         if subtitles and self.ENABLE_SUBS == 'true':
             t = [x.get('lang') for x in subtitles]
@@ -1154,8 +1173,8 @@ class PLAYERPL(object):
                     mud = 'listcategSerial'
                     fold = True
                 elif vod['type'] == 'SECTION':
-                    mud = 'listcategSerial'
-                    fold = True
+                    add_item('%s:' % vid, meta.tytul, meta.foto, mode='section_list', folder=True, isPlayable=False)
+                    continue
                 else:
                     mud = 'playvid'
                     fold = False
@@ -1176,10 +1195,24 @@ class PLAYERPL(object):
                 if vod['type'] == 'SERIAL':
                     mud = 'listcategSerial'
                     fold = True
+                # elif vod['type'] == 'SECTION':
+                #     mud = 'listcollectContent'
+                #     fold = True
+                elif vod['type'] == 'SECTION':
+                    add_item('%s:' % vid, meta.tytul, meta.foto, mode='section_list', folder=True, isPlayable=False)
+                    continue
                 else:
                     mud = 'playvid'
                     fold = False
             self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
+
+    def section_list(self, exlink):
+        ex = ExLink.new(exlink)
+        url = self.SECTION_CONTENT.format(sid=ex.gid)
+        data = getRequests(url, headers=self.HEADERS2, params=self.params())
+        self.process_vod_list(data['items'])
+        setView('tvshows')
+        xbmcplugin.endOfDirectory(addon_handle, cacheToDisc=False)
 
     def listCollection(self):
         def load_subfolders(item):
