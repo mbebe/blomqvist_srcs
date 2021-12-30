@@ -1128,14 +1128,14 @@ class PLAYERPL(object):
         allowed = (meta and meta.allowed is True) or vid in self.mylist
         if allowed or not self.skip_unaviable:
             no_playable = not (mud or '').strip() or meta.sezon
-            if no_playable:
+            if no_playable or not allowed:
                 isPlayable = False
-                folder = True
+                # folder = True
             elif isPlayable is None:
                 isPlayable = not folder
             if suffix is None:
                 suffix = u''
-                if no_playable and not allowed:
+                if (no_playable and not folder) or not allowed:
                     # auto suffix for non-playable video
                     suffix += u' - [COLOR khaki]([I]brak w pakiecie[/I])[/COLOR]'
                 sched = vod and vod.get('displaySchedules')
@@ -1168,16 +1168,15 @@ class PLAYERPL(object):
             vid = vod['id']
             meta = self.get_meta_data(vod)
             mud, fold = ' ', None
-            if meta.allowed is True:
-                if vod['type'] == 'SERIAL':
-                    mud = 'listcategSerial'
-                    fold = True
-                elif vod['type'] == 'SECTION':
-                    add_item('%s:' % vid, meta.tytul, meta.foto, mode='section_list', folder=True, isPlayable=False)
-                    continue
-                else:
-                    mud = 'playvid'
-                    fold = False
+            if vod['type'] == 'SERIAL':
+                mud = 'listcategSerial'
+                fold = True
+            elif vod['type'] == 'SECTION':
+                add_item('%s:' % vid, meta.tytul, meta.foto, mode='section_list', folder=True, isPlayable=False)
+                continue
+            else:
+                mud = 'playvid'
+                fold = False
             self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
 
     def process_vod_list(self, vod_list, subitem=None):
@@ -1191,19 +1190,15 @@ class PLAYERPL(object):
             vid = vod['id']
             meta = self.get_meta_data(vod)
             mud, fold = ' ', None
-            if meta.allowed is True:
-                if vod['type'] == 'SERIAL':
-                    mud = 'listcategSerial'
-                    fold = True
-                # elif vod['type'] == 'SECTION':
-                #     mud = 'listcollectContent'
-                #     fold = True
-                elif vod['type'] == 'SECTION':
-                    add_item('%s:' % vid, meta.tytul, meta.foto, mode='section_list', folder=True, isPlayable=False)
-                    continue
-                else:
-                    mud = 'playvid'
-                    fold = False
+            if vod['type'] == 'SERIAL':
+                mud = 'listcategSerial'
+                fold = True
+            elif vod['type'] == 'SECTION':
+                add_item('%s:' % vid, meta.tytul, meta.foto, mode='section_list', folder=True, isPlayable=False)
+                continue
+            else:
+                mud = 'playvid'
+                fold = False
             self.add_media_item(mud, vid, meta, folder=fold, vod=vod)
 
     def section_list(self, exlink):
