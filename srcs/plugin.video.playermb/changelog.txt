@@ -1,7 +1,7 @@
 1.12
 - dynamiczna lista kategorii
 - obsługa Eurosport (m1992)
-- generowanie listy m3u TV (m1992)
+- generowanie listy m3u TV (m1992, artubieski)
 
 1.11
 - forsowanie seriali nawet gdy nie są w liście dozwolonych

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<addon id="plugin.video.playermb" version="1.11.21" name="PlayerPLmb" provider-name="mbebe, kszaq, m1992, rysson">
+<addon id="plugin.video.playermb" version="1.12" name="PlayerPLmb" provider-name="mbebe, kszaq, m1992, rysson">
 <requires>
     <!-- <import addon="xbmc.python" version="3.0.0" /> -->
     <import addon="script.module.six" />
@@ -28,7 +28,7 @@
     <news>1.12
 - dynamiczna lista kategorii
 - obsługa Eurosport (m1992)
-- generowanie listy m3u TV (m1992)
+- generowanie listy m3u TV (m1992, artubieski)
 1.11
 - forsowanie seriali nawet gdy nie są w liście dozwolonych
 - usuwanie duplikatów
