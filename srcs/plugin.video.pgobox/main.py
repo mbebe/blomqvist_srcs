@@ -494,6 +494,8 @@ class IPLA(object):
                 else:
                     myper=[]
                     for i in data["result"]["accessGroups"]:
+                        if ':true' in i:
+                            myper.append(str(i))
                         if 'sc:' in i:
                             myper.append(str(i))
                         if 'oth:' in i:
@@ -503,9 +505,7 @@ class IPLA(object):
                         if 'cp_sub_ext:' in i:
                             myper.append(str(i.replace('cp_sub_ext','sc')))
                         if 'cp_sub_base:' in i:
-                            myper.append(str(i.replace('cp_sub_base','sc')))
-                            
-                            
+                            myper.append(str(i.replace('cp_sub_base','sc')))                        
 
                     addon.setSetting('myperm', str(myper))
 
