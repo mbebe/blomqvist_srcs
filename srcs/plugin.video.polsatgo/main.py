@@ -111,7 +111,9 @@ def add_item(url, name, image, folder, mode,  isPlayable=True, infoLabels=False,
 
 def PlayPolsat(stream_url,data):
     import inputstreamhelper
-
+    from datetime import datetime
+    import time
+    
     PROTOCOL = 'mpd'
     DRM = 'com.widevine.alpha'
     LICENSE_URL = 'https://b2c-www.redefine.pl/rpc/drm/'
@@ -121,6 +123,24 @@ def PlayPolsat(stream_url,data):
 
     dane=eval(opisy)
     if is_helper.check_inputstream():
+
+        # Check start time
+        try:
+            publication_date = dane['title'].split(' - ')[0]
+            
+            format = "%Y-%m-%d %H:%M:%S"
+
+            try:
+                res = datetime.strptime(publication_date, format)
+            except TypeError:
+                res = datetime(*(time.strptime(publication_date, format)[0:6]))
+            
+            if res > datetime.now():
+                xbmcgui.Dialog().ok('Polsat GO', 'Materiał rozpoczyna się:[CR][COLOR green][B]{}[/B][/COLOR]'.format(publication_date))
+                return None
+        except:
+            pass
+
         play_item = xbmcgui.ListItem(path=stream_url)#
         play_item.setInfo(type="Video", infoLabels={"title": dane['title'],'plot':dane['plot']})
 
@@ -240,19 +260,9 @@ def playCPGO(id,cpid=0):
     sessexpir=str(sesja['keyExpirationTime'])
     sesskey=sesja['key']
 
-
-
-
-
-
-
-
-
     addon.setSetting('sesstoken', sesstoken)
     addon.setSetting('sessexpir', str(sessexpir))
     addon.setSetting('sesskey', sesskey)
-
-
 
     response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
     sesja=response['result']['session']
@@ -273,7 +283,7 @@ def playCPGO(id,cpid=0):
 
     data = {"jsonrpc":"2.0","id":1,"method":"prePlayData","params":{"ua":uapgwidevine,"userAgentData":{"deviceType":"pc","application":"firefox","os":"windows","build":2161400,"portal":"pg","player":"html","widevine":True},"cpid":cpid,"mediaId":id,"authData":{"sessionToken":authdata},"clientId":clid}}
 
-    response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
+    response = requests.post(navigate_url, headers=headers, json=data, timeout=15, verify=False).json()
     playback = response['result']['mediaItem']['playback']
     mediaid = playback['mediaId']['id']
     mediaSources = playback['mediaSources'][0]
@@ -282,18 +292,18 @@ def playCPGO(id,cpid=0):
 
     try:
         cc=mediaSources['authorizationServices']['pseudo']
+
         dane =stoken+'|'+sexpir+'|drm|getPseudoLicense'
         authdata=getHmac(dane)
         devcid=devid.replace('-','')
 
-
         data={"jsonrpc":"2.0","id":1,"method":"getPseudoLicense","params":{"ua":"cpgo_www_html5/2","cpid":1,"mediaId":mediaid,"sourceId":sourceid,"deviceId":{"type":"other","value":devcid},"authData":{"sessionToken":authdata}}}
-        response = requests.post('https://b2c-www.redefine.pl/rpc/drm/', headers=headers, json=data,timeout=15, verify=False).json()
+        response = requests.post('https://b2c-www.redefine.pl/rpc/drm/', headers=headers, json=data, timeout=15, verify=False).json()
+
         str_url=response['result']['url']
-
         PlayPolsatPseudo(str_url)
+    
     except:
-
         stream_url = mediaSources['url']
 
         dane =stoken+'|'+sexpir+'|drm|getWidevineLicense'
@@ -303,6 +313,7 @@ def playCPGO(id,cpid=0):
         data=quote('{"jsonrpc":"2.0","id":1,"method":"getWidevineLicense","params":{"userAgentData":{"deviceType":"pc","application":"firefox","os":"windows","build":2161400,"portal":"pg","player":"html","widevine":true},"cpid":%d,"mediaId":"'%cpid+mediaid+'","sourceId":"'+sourceid+'","keyId":"'+keyid+'","object":"b{SSM}","deviceId":{"type":"other","value":"'+devcid+'"},"ua":"pg_pc_windows_firefox_html/2161400","authData":{"sessionToken":"'+authdata+'"},"clientId":"'+clid+'"}}')
 
         PlayPolsat(stream_url,data)
+    
     return
 
 def PlayPolsatPseudo(str_url):
@@ -556,6 +567,7 @@ def newtime(self,ff):
     return dd,format_date
 
 def live():
+    from datetime import datetime
     headers = {
         'Host': host,
         'User-Agent': UA,
@@ -601,12 +613,13 @@ def live():
         for j in myperms:
 
             if j in channelperms or u'transmisja bezpłatna' in i['title']:
-                item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
+                item['img'] = i['thumbnails'][-1]['src'].encode('utf-8').decode('utf-8')
                 item['id'] = i['id']
 
                 z,data = newtime(i["publicationDate"])
-                item['title'] = '%s - %s'%(data,i['title'].upper().encode('utf-8'))
-                item['plot'] = i['category']['description'].encode('utf-8')
+
+                item['title'] = '%s - %s'%(data,i['title'].upper().encode('utf-8').decode('utf-8'))
+                item['plot'] = i['category']['description'].encode('utf-8').decode('utf-8')
                 items.append(item)
     dupes = []
     filter = []
@@ -701,9 +714,14 @@ def tvmain():
 
     xbmcplugin.endOfDirectory(addon_handle)
 
+def local_time(ff):
+    from datetime import datetime, timedelta
+    return ff - timedelta(hours=1)
 
 def newtime(ff):
     from datetime import datetime
+    import time
+
     ff=re.sub(':\d+Z','',ff)
     dd=re.findall('T(\d+)',ff)[0]
     dzien=re.findall('(\d+)T',ff)[0]
@@ -715,15 +733,16 @@ def newtime(ff):
         dd='01'
         dzien='{:>02d}'.format(int(dzien)+1)
     ff=re.sub('(\d+)T(\d+)','%sT%s'%(dzien,int(dd)),ff)
-
-    import time
+    
     try:
         format_date=datetime.strptime(ff, '%Y-%m-%dT%H:%M')
     except TypeError:
         format_date=datetime(*(time.strptime(ff, '%Y-%m-%dT%H:%M')[0:6]))
+
+    # timestamp
     dd= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
 
-    return dd,format_date
+    return dd,local_time(format_date)
 
 def getEpgs():
     kanaly = addon.getSetting('kanaly')
