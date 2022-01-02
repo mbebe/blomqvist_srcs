@@ -111,7 +111,9 @@ def add_item(url, name, image, folder, mode,  isPlayable=True, infoLabels=False,
 
 def PlayPolsat(stream_url,data):
     import inputstreamhelper
-
+    from datetime import datetime
+    import time
+    
     PROTOCOL = 'mpd'
     DRM = 'com.widevine.alpha'
     LICENSE_URL = 'https://b2c-www.redefine.pl/rpc/drm/'
@@ -121,6 +123,24 @@ def PlayPolsat(stream_url,data):
 
     dane=eval(opisy)
     if is_helper.check_inputstream():
+
+        # Check start time
+        try:
+            publication_date = dane['title'].split(' - ')[0]
+            
+            format = "%Y-%m-%d %H:%M:%S"
+
+            try:
+                res = datetime.strptime(publication_date, format)
+            except TypeError:
+                res = datetime(*(time.strptime(publication_date, format)[0:6]))
+            
+            if res > datetime.now():
+                xbmcgui.Dialog().ok('Polsat GO', 'Materiał rozpoczyna się:[CR][COLOR green][B]{}[/B][/COLOR]'.format(publication_date))
+                return None
+        except:
+            pass
+
         play_item = xbmcgui.ListItem(path=stream_url)#
         play_item.setInfo(type="Video", infoLabels={"title": dane['title'],'plot':dane['plot']})
 
@@ -271,26 +291,17 @@ def playCPGO(id,cpid=0):
     sourceid = mediaSources['id']
 
     try:
-        try:
-            cc=mediaSources['authorizationServices']['pseudo']
-        except:
-            pass
+        cc=mediaSources['authorizationServices']['pseudo']
 
         dane =stoken+'|'+sexpir+'|drm|getPseudoLicense'
         authdata=getHmac(dane)
         devcid=devid.replace('-','')
 
-
         data={"jsonrpc":"2.0","id":1,"method":"getPseudoLicense","params":{"ua":"cpgo_www_html5/2","cpid":1,"mediaId":mediaid,"sourceId":sourceid,"deviceId":{"type":"other","value":devcid},"authData":{"sessionToken":authdata}}}
         response = requests.post('https://b2c-www.redefine.pl/rpc/drm/', headers=headers, json=data, timeout=15, verify=False).json()
-        try:
-            if response['error']['code'] == 13404:
-                xbmcgui.Dialog().ok('Polsat GO', 'Materiał nie dostępny.')
-                return None
 
-        except Exception as ex:
-            str_url=response['result']['url']
-            PlayPolsatPseudo(str_url)
+        str_url=response['result']['url']
+        PlayPolsatPseudo(str_url)
     
     except:
         stream_url = mediaSources['url']
@@ -556,6 +567,7 @@ def newtime(self,ff):
     return dd,format_date
 
 def live():
+    from datetime import datetime
     headers = {
         'Host': host,
         'User-Agent': UA,
@@ -605,6 +617,7 @@ def live():
                 item['id'] = i['id']
 
                 z,data = newtime(i["publicationDate"])
+
                 item['title'] = '%s - %s'%(data,i['title'].upper().encode('utf-8').decode('utf-8'))
                 item['plot'] = i['category']['description'].encode('utf-8').decode('utf-8')
                 items.append(item)
