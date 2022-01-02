@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+	<!-- Konto -->
+	<category label="Televio.pl">
+
+        <setting label="Dane logowania:" type="lsep"/>
+        <setting id="login"  type="text" label="Login" default="" />
+        <setting id="password"  type="text" label="Hasło" option="hidden"  default="" />
+		
+	</category>
+
+</settings>
