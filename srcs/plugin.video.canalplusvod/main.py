@@ -48,7 +48,7 @@ addon = xbmcaddon.Addon(id='plugin.video.canalplusvod')
 
 PATH            = addon.getAddonInfo('path')
 if sys.version_info[0] > 2:
-    DATAPATH        = xbmc.translatePath(addon.getAddonInfo('profile'))#.decode('utf-8')
+    DATAPATH        = xbmcvfs.translatePath(addon.getAddonInfo('profile'))#.decode('utf-8')
 else:
     DATAPATH        = xbmc.translatePath(addon.getAddonInfo('profile'))
 RESOURCES       = PATH+'/resources/'
@@ -106,7 +106,7 @@ def setView(typ):
 def home():
     CANALvod().logowanie()
 
-    add_item('', '[B][COLOR blue]Kanaly TV[/COLOR][/B]', ikona, "listkanaly", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
+    add_item('', '[B][COLOR blue]Kanały TV[/COLOR][/B]', ikona, "listkanaly", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
     add_item('', '[B][COLOR blue]VOD[/COLOR][/B]', ikona, "listvodmenu", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
 
     add_item('', '[B][COLOR khaki]Szukaj[/COLOR][/B]', ikona, "szukaj", folder=True,fanart=FANART)
@@ -122,7 +122,7 @@ def ListVodMenu():
     add_item(CANALvod().seriesURL, '[B][COLOR blue]Seriale[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
     add_item(CANALvod().kidsURL, '[B][COLOR blue]Dzieci[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
     
-    add_item(CANALvod().funURL, '[B][COLOR blue]Fun & Info[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
+    add_item(CANALvod().lifeURL, '[B][COLOR blue]Lifestyle[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
    # add_item(CANALvod().documentsURL, '[B][COLOR blue]Dokumenty[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
     #add_item(CANALvod().demandURL, '[B][COLOR blue]Kanały na życzenie[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
 
@@ -156,9 +156,12 @@ def GenList():
     import playlist
     dialog = xbmcgui.Dialog()
     addon = xbmcaddon.Addon()
-    profile = xbmc.translatePath(addon.getAddonInfo('profile')).decode('utf-8')
+    try:
+        profile = xbmcvfs.translatePath(addon.getAddonInfo('profile'))
+    except:
+        profile = xbmc.translatePath(addon.getAddonInfo('profile'))
     fn = dialog.browse(0, "Wskaż lokalizację zapisu listy", profile)
-    if fn is not "":
+    if fn != "":
         profile = fn
     m3u8 = playlist.Playlist('canalPLUS-VOD')
     count = 1
@@ -195,9 +198,8 @@ def GenList():
             canalurl = build_url({'name': item['title'],'moviescount': 0,'url': item['url'],'image': item['image'],'movie': True,'mode': mud,'page': page})
             m3u8.addM3UChannel(count, item['title'], item['image'], grouptitle, count, canalurl)
             count += 1
-        m3ufile = open(profile + 'canalPLUS-VOD.m3u8', 'w+')
-        m3ufile.write(m3u8.getM3UList())
-        m3ufile.close()
+        with open(profile + 'canalPLUS-VOD.m3u8', 'w+', encoding='utf-8') as m3ufile:
+            m3ufile.write(m3u8.getM3UList())
         xbmcgui.Dialog().notification('[B]Wykonano[/B]', 'Lista zapisana', xbmcgui.NOTIFICATION_INFO, 8000)
     
 def jsonrpc(**kwargs):
@@ -233,7 +235,7 @@ def PLAYvodCANAL(urlid):
     
     headers2 = {
 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
         'Accept': '*/*',
 
         'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
@@ -242,7 +244,7 @@ def PLAYvodCANAL(urlid):
     headers = {
 
         'Accept': 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
         'Origin': 'https://www.canalplus.com',
         'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
     }
@@ -257,16 +259,16 @@ def PLAYvodCANAL(urlid):
     stream_url = requests.get(str_url, headers=headers2,verify=False ).url
     
     stream_url = re.sub('(\?token.+?)$','/manifest',stream_url)
-    xbmc.log('@#@requestsrequestsrequestsrequests: %s' % str(url), LOGNOTICE)
+    #xbmc.log('@#@requests: %s' % str(url), LOGNOTICE)
     
     
-    data = quote('{"ServiceRequest":{"InData":{"EpgId":'+id_+',"LiveToken":"'+ CANALvod().LIVEtoken+'","UserKeyId":"'+CANALvod().DEVICE_ID+'","DeviceKeyId":"'+CANALvod().DEVID+'","ChallengeInfo":"b{SSM}"}}}')
+    data = quote('{"ServiceRequest":{"InData":{"EpgId":'+id_+',"Mode":"MKPL","LiveToken":"'+ CANALvod().LIVEtoken+'","UserKeyId":"'+CANALvod().DEVICE_ID+'","DeviceKeyId":"'+CANALvod().DEVID+'","ChallengeInfo":"b{SSM}"}}}')
 
     
     headers3 = {
         'Host': 'secure-webtv.canal-plus.com',
         'Accept': 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
         'Content-Type': 'application/json;charset=UTF-8',
         'Origin': 'https://www.canalplus.com',
         'Sec-Fetch-Site': 'cross-site',
@@ -285,24 +287,26 @@ def PLAYvodCANAL(urlid):
  
     
     
-    PROTOCOL = 'ism'
+    PROTOCOL = 'mpd'
     DRM = 'com.widevine.alpha'
 
     PROXY_PATH='http://127.0.0.1:%s/licensetv='%(proxyport)
-    abtv= "https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/31/apps/1/jobs/GetLicence"#  HAPI_BASE_URL+jsonparser_stream_datas['@licence']+ '?drmType=DRM_WIDEVINE' 
+
+    offer_zone = 0
+    drm_id = 0
+
+    abtv= "https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/31/apps/1/jobs/GetLicence"
     set_setting('heatv', str(headers3))
     set_setting('lictvurl', str(abtv))
-   # set_setting('datatv', str(data))
-    url = PROXY_PATH + abtv
- #   LICKEY =  url+"|"+urlencode(headers3)+"|"+data+"|JBLicenseInfo"
-    LICKEY =  url+"|"+urlencode(headers3)+"|"+data+"|B"#JBLicenseInfo"
 
-    
+    url = PROXY_PATH + abtv
+
+    LICKEY =  url+"|"+urlencode(headers3)+"|"+data+"|B"
     
     is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
     if is_helper.check_inputstream():
         play_item = xbmcgui.ListItem(path=stream_url)#
-        play_item.setMimeType('application/x-ms-manifest')
+        play_item.setMimeType('application/dash+xml')
         play_item.setContentLookup(False)
         
         if sys.version_info >= (3,0,0):
@@ -315,6 +319,7 @@ def PLAYvodCANAL(urlid):
         play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
         play_item.setProperty('inputstream.adaptive.license_type', DRM)
         play_item.setProperty('inputstream.adaptive.license_key',LICKEY) 
+       # play_item.setProperty('inputstream.adaptive.play_timeshift_buffer', 'true')
 
         xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)    
     
@@ -343,7 +348,7 @@ def PLAYvod2(urlid):
     value_pass_token = 'PASS Token="%s"' % quote(CANALvod().PASStoken)
 
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'pl,pl-PL',
         'XX-DOMAIN': 'cppol',
@@ -408,14 +413,12 @@ def PLAYvod2(urlid):
         'contentType':distMode_value
     }
 
-    resp_stream_datas = sess.put(
-        URL_STREAM_DATAS, json=payload, headers=headers,verify=False)
+    resp_stream_datas = sess.put(URL_STREAM_DATAS, json=payload, headers=headers,verify=False)
     jsonparser_stream_datas = json.loads(resp_stream_datas.text)
 
-    resp_real_stream_datas = sess.get(
-        HAPI_BASE_URL+jsonparser_stream_datas['@medias'], headers=headers,verify=False)
-    jsonparser_real_stream_datas = json.loads(
-        resp_real_stream_datas.text)
+    resp_real_stream_datas = sess.get(HAPI_BASE_URL+jsonparser_stream_datas['@medias'], headers=headers,verify=False)
+
+    jsonparser_real_stream_datas = json.loads(resp_real_stream_datas.text)
 
     
     stream_urls = jsonparser_real_stream_datas[0]['files']
@@ -434,7 +437,7 @@ def PLAYvod2(urlid):
         value_pass_token,
         'Content-Type':
         'text/plain',
-        'User-Agent': quote('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0'),
+        'User-Agent': quote('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0'),
         'XX-DEVICE':
         'pc %s' % CANALvod().DEVID,
         'XX-DOMAIN':
@@ -552,6 +555,7 @@ def ListContent(url):
         ilab={}
         ilab['plot'] = 'Kategorie'
         ilab['title'] = 'Kategorie'
+
         add_item(urlk, 'Kategorie', ikona, mud, folder=fold, IsPlayable=False, infoLabels=ilab,fanart=FANART)
     if items:
     
@@ -685,12 +689,12 @@ class CANALvod(object):
 
         self.mainLOGINurl = 'https://logowanie.pl.canalplus.com/login'
         self.OAUTH_HEADERS = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                 'Host': 'dev.canalplus.com',}
 
     
         self.HEADERS2 = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
                 'DNT': '1',
@@ -699,16 +703,16 @@ class CANALvod(object):
                 'Upgrade-Insecure-Requests': '1',}
 
         self.HEADERS3 = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                 'Host': 'www.canalplus.com',}
                 
                 
         self.HEADERS4 = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                 'Host': 'pass.canal-plus.com',}    
 
         self.PASSheaders = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'Host': 'pass-api-v2.canal-plus.com',
         }
             
@@ -722,7 +726,7 @@ class CANALvod(object):
         self.cinemaURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102783.json"
         self.seriesURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102782.json"
         self.kidsURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102826.json"
-        self.funURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102965.json"
+        self.lifeURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/109674.json"
         self.demandURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102961.json" 
             
         self.searchURL = 'https://hodor.canalplus.pro/api/v2/mycanalint/search/mycanal_channel_discover/{}/query/{}?distmodes=[%22catchup%22,%22svod%22,%22tvod%22]&displayNBOLogo=true'    
@@ -815,7 +819,7 @@ class CANALvod(object):
                 
                 
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:85.0) Gecko/20100101 Firefox/85.0',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                     'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
                     'DNT': '1',
@@ -830,7 +834,7 @@ class CANALvod(object):
                     execution = execution[0]
                     headers = {
                         'Host': 'logowanie.pl.canalplus.com',
-                        'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+                        'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                         'accept-language': 'pl,en-US;q=0.7,en;q=0.3',
                         'content-type': 'application/x-www-form-urlencoded',
@@ -844,7 +848,7 @@ class CANALvod(object):
                     
                     response = sess.post(self.mainLOGINurl, headers=headers, data=data,verify=False)
                     av=response.text
-                    adres = re.findall('btn btn-primary".*?href="([^"]+)',response.text,re.DOTALL)
+                    adres = re.findall('btn btn-primary.*?href="([^"]+)',response.text,re.DOTALL)
                     if not adres:
                         xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Niepoprawne dane logowania',ikona, 8000,False)
                         add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False,fanart=FANART)
@@ -901,7 +905,7 @@ class CANALvod(object):
                     URL_DEVICE_ID = 'https://pass.canal-plus.com/service/HelloJSON.php'
                     
                     header_device_id = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                         'referer':'https://secure-player.canal-plus.com/one/prod/v2/',
                         'Cookie': 'p_pass_token='+self.PASStoken+'&passId='+self.PASStoken
                     }
@@ -955,7 +959,10 @@ class CANALvod(object):
         fff=''
         for event_ in ch['events']:
             starttime = event_["timecodes"][0]["start"]
-            duration = event_["timecodes"][0]["duration"] 
+            try:
+                duration = event_["timecodes"][0]["duration"] 
+            except:
+                duration = 0
             pocz, koniec =self.czs(starttime, duration)
             fff+='%s - %s %s [CR]'%(pocz,koniec,PLchar(event_["title"]))
             out['title']=fff
@@ -964,7 +971,7 @@ class CANALvod(object):
     def epgLive(self):
         headers = {
             'Host': 'secure-webtv-static.canal-plus.com',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         }
         
@@ -984,7 +991,7 @@ class CANALvod(object):
         }
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
             'Content-Type': 'application/json;charset=utf-8',
@@ -1051,7 +1058,7 @@ class CANALvod(object):
         }
         
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
             'Content-Type': 'application/json;charset=utf-8',
@@ -1122,7 +1129,7 @@ class CANALvod(object):
         }
 
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'Accept': '*/*',
             'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -1163,7 +1170,7 @@ class CANALvod(object):
 
         out =[]
         h1 = {'Host': 'hodor.canalplus.pro',
-            'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'accept': '*/*',
             'accept-language': 'pl,en-US;q=0.7,en;q=0.3',
 
@@ -1235,7 +1242,6 @@ class CANALvod(object):
                         else:
 
                             if strate['context']['contextDetail'] == typ2 or typ2=='cdn':
-
                                 contents = strate['contents']
 
                                 for content in contents:
@@ -1262,8 +1268,7 @@ class CANALvod(object):
                                     out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": '','typ':typ})
 
                             elif strate['context']['contextType']=='edito': 
-
-                                if typ2=='24376' or typ2=='70025' or typ2== '70028' or typ2=='70027' or typ2=='70024' or typ2=='70023' or typ2=='70008' or typ2=='70001' or typ2=='70002' or typ2=='70003' or typ2=='70043' or typ2=='70042' or typ2=='70008' or typ2=='70009' or typ2=='70011' or typ2=='70007' or typ2=='70010' or typ2=='70016' or typ2=='70017' or typ2=='70026' or typ2=='70029' or typ2=='70030': #105007.json' in url or '104796.json' in url or '105158.json' in url or '105162.json':
+                                if typ2=='70047' or typ2=='70067' or typ2=='24376' or typ2=='70025' or typ2== '70028' or typ2=='70027' or typ2=='70024' or typ2=='70023' or typ2=='70008' or typ2=='70001' or typ2=='70002' or typ2=='70003' or typ2=='70043' or typ2=='70042' or typ2=='70008' or typ2=='70009' or typ2=='70011' or typ2=='70007' or typ2=='70010' or typ2=='70016' or typ2=='70017' or typ2=='70026' or typ2=='70029' or typ2=='70030': #105007.json' in url or '104796.json' in url or '105158.json' in url or '105162.json':
                                     contents = strate['contents']
                                     for content in contents:
 
