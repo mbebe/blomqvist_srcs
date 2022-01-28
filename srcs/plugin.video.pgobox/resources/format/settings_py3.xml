@@ -52,6 +52,11 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
+				<setting help="" id="sort" label="30012" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
 				<setting help="" id="ilosc" label="30004" type="string">
 					<level>0</level>
 					<default>65</default>
@@ -76,5 +81,19 @@
 				</setting>
 			</group>
 		</category>
+	<category help="" id="m3u" label="30010">
+		<group id="1">
+			<setting help="" id="build_m3u" type="string" label="30011">
+				<level>0</level>
+				<default></default>
+				<constraints>
+					<allowempty>true</allowempty>
+				</constraints>
+				<control type="button" format="action">
+					<data>RunPlugin(plugin://plugin.video.pgobox?mode=build_m3u)</data>
+				</control>
+			</setting>
+		</group>
+	</category>
 	</section>
 </settings>
