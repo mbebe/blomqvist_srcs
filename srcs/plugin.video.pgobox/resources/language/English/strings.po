@@ -55,3 +55,15 @@ msgstr ""
 msgctxt "#30009"
 msgid "Check license server certificate"
 msgstr ""
+
+msgctxt "#30010"
+msgid "Playlist M3U Generator"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Create playlist M3U"
+msgstr ""
+
+msgctxt "#30012"
+msgid "Sort alphabetically"
+msgstr ""

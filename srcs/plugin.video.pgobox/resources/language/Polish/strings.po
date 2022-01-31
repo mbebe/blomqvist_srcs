@@ -55,3 +55,15 @@ msgstr "DRM"
 msgctxt "#30009"
 msgid "Check license server certificate"
 msgstr "Sprawdzanie certyfikatu serwera licencji"
+
+msgctxt "#30010"
+msgid "Playlist M3U Generator"
+msgstr "Kreator listy M3U"
+
+msgctxt "#30011"
+msgid "Create playlist M3U"
+msgstr "Utwórz listę M3U"
+
+msgctxt "#30012"
+msgid "Sort alphabetically"
+msgstr "Sortuj alfabetycznie"
