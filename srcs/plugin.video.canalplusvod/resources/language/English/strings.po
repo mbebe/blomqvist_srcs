@@ -39,11 +39,3 @@ msgstr ""
 msgctxt "#30006"
 msgid "Auto-view"
 msgstr ""
-
-msgctxt "#30008"
-msgid "DRM"
-msgstr ""
-
-msgctxt "#30009"
-msgid "Check license server certificate"
-msgstr ""

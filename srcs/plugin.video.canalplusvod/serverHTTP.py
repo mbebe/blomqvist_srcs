@@ -36,10 +36,6 @@ else:
 
 import sys
 PY3 = sys.version_info >= (3,0,0)
-
-from settings import Settings
-r = Settings()
-
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):

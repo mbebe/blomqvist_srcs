@@ -7,7 +7,6 @@ try:
     import urllib.request, urllib.parse, urllib.error
     from urllib.parse import urlencode, quote_plus, quote, unquote, parse_qsl
     LOGNOTICE = xbmc.LOGINFO
-
 except ImportError:
     import cookielib
     import urllib
@@ -18,7 +17,6 @@ except ImportError:
 
 import requests
 import urllib3
-import base64
 
 requests.packages.urllib3.disable_warnings()
 requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':HIGH:!DH:!aNULL'
@@ -28,13 +26,8 @@ except AttributeError:
     # no pyopenssl support used / needed / available
     pass
 
-import ssl
-try:
-    _create_unverified_https_context = ssl._create_unverified_context
-except AttributeError:
-    pass
-else:
-    ssl._create_default_https_context = _create_unverified_https_context
+
+
 
 import xbmcgui
 import xbmcplugin
@@ -43,16 +36,16 @@ import xbmc
 import xbmcvfs
 
 import json
+
 import inputstreamhelper
+
 import datetime
-import time
 
 base_url = sys.argv[0]
 addon_handle = int(sys.argv[1])
 params = dict(parse_qsl(sys.argv[2][1:]))
 addon = xbmcaddon.Addon(id='plugin.video.canalplusvod')
 
-<<<<<<< Updated upstream
 PATH            = addon.getAddonInfo('path')
 if sys.version_info[0] > 2:
     DATAPATH        = xbmcvfs.translatePath(addon.getAddonInfo('profile'))#.decode('utf-8')
@@ -60,27 +53,23 @@ else:
     DATAPATH        = xbmc.translatePath(addon.getAddonInfo('profile'))
 RESOURCES       = PATH+'/resources/'
 
-=======
-PATH = addon.getAddonInfo('path')
-RESOURCES = PATH + '/resources/'
->>>>>>> Stashed changes
 
-ikona = RESOURCES + '../icon.png'
-FANART = RESOURCES + '../fanart.jpg'
+ikona = RESOURCES+'../icon.png'
+FANART=RESOURCES+'../fanart.jpg'
 sys.path.append( os.path.join( RESOURCES, "lib" ) )
 
 exlink = params.get('url', None)
-name = params.get('name', None)
+name= params.get('name', None)
 page = params.get('page','')
-rys = params.get('image', None)
 
-kukz = ''
+rys= params.get('image', None)
 
-TIMEOUT = 15
+kukz=''
+
+TIMEOUT=15
 
 sess = requests.Session()
 proxyport = addon.getSetting('proxyport')
-
 def build_url(query):
     try:
         urlencode = urllib.urlencode(query)
@@ -89,24 +78,24 @@ def build_url(query):
 
     return base_url + '?' + urlencode
 
-def add_item(url, name, image, mode, folder=False, IsPlayable=False, infoLabels=False, movie=True, itemcount=1, page=1, fanart=FANART, moviescount=0):
+def add_item(url, name, image, mode, folder=False, IsPlayable=False, infoLabels=False, movie=True,itemcount=1, page=1,fanart=FANART,moviescount=0):
     list_item = xbmcgui.ListItem(label=name)
 
     if IsPlayable:
         list_item.setProperty("IsPlayable", 'True')
-
     if not infoLabels:
         infoLabels={'title': name,'plot':name}
-
     list_item.setInfo(type="video", infoLabels=infoLabels)    
     list_item.setArt({'thumb': image, 'poster': image, 'banner': image, 'fanart': FANART})
-    ok = xbmcplugin.addDirectoryItem(
-        handle = addon_handle,
+    ok=xbmcplugin.addDirectoryItem(
+        handle=addon_handle,
         url = build_url({'mode': mode, 'url' : url, 'page' : page, 'moviescount' : moviescount,'movie':movie,'name':name,'image':image}),            
-        listitem = list_item,
-        isFolder = folder)
+        listitem=list_item,
+        isFolder=folder)
 
     return ok
+    
+    
     
 def setView(typ):
     if addon.getSetting('auto-view') == 'false':
@@ -116,23 +105,17 @@ def setView(typ):
     
 def home():
     CANALvod().logowanie()
-    add_item('', '[B][COLOR blue]Kanały TV[/COLOR][/B]', ikona, "listkanaly", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    add_item('', '[B][COLOR blue]VOD[/COLOR][/B]', ikona, "listvodmenu", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
 
-<<<<<<< Updated upstream
     add_item('', '[B][COLOR blue]Kanały TV[/COLOR][/B]', ikona, "listkanaly", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
     add_item('', '[B][COLOR blue]VOD[/COLOR][/B]', ikona, "listvodmenu", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
-=======
-    add_item('', '[B][COLOR khaki]Szukaj[/COLOR][/B]', ikona, "szukaj", folder=True, fanart=FANART)
-    add_item('', 'Opcje', ikona, "opcje", folder=False, fanart=FANART)
-    add_item('', 'Kreator listy M3U', ikona, "kreatorm3u", folder=True, fanart=FANART)
->>>>>>> Stashed changes
 
+    add_item('', '[B][COLOR khaki]Szukaj[/COLOR][/B]', ikona, "szukaj", folder=True,fanart=FANART)
+    add_item('', 'Opcje', ikona, "opcje", folder=False,fanart=FANART)
+    add_item('', 'Generator listy m3u', ikona, "genlist", folder=True,fanart=FANART)
     if CANALvod().LOGGED == 'true':
         add_item('', '[B][COLOR blue]Wyloguj[/COLOR][/B]', ikona, "logout", folder=False,fanart=FANART)
 
 def ListVodMenu():
-<<<<<<< Updated upstream
 
 
     add_item(CANALvod().cinemaURL, '[B][COLOR blue]Filmy[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
@@ -150,37 +133,26 @@ def ListVodMenu():
     add_item(CANALvod().sportURL, '[B][COLOR blue]Sport[/COLOR][/B]', ikona, "listContent", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
     #add_item(CANALvod().demandURL, '[B][COLOR blue]Kanały na życzenie[/COLOR][/B]', ikona, "listDemand", folder=True,IsPlayable=False, infoLabels=False,fanart=FANART)
 
-=======
-    add_item(CANALvod().cinemaURL, '[B][COLOR blue]Filmy[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    add_item(CANALvod().seriesURL, '[B][COLOR blue]Seriale[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    add_item(CANALvod().kidsURL, '[B][COLOR blue]Dzieci[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    add_item(CANALvod().lifeURL, '[B][COLOR blue]Lifestyle[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    #add_item(CANALvod().documentsURL, '[B][COLOR blue]Dokumenty[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    #add_item(CANALvod().demandURL, '[B][COLOR blue]Kanały na życzenie[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    add_item(CANALvod().documentsURL, '[B][COLOR blue]Dokumenty[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    add_item(CANALvod().sportURL, '[B][COLOR blue]Sport[/COLOR][/B]', ikona, "listContent", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
-    #add_item(CANALvod().demandURL, '[B][COLOR blue]Kanały na życzenie[/COLOR][/B]', ikona, "listDemand", folder=True, IsPlayable=False, infoLabels=False, fanart=FANART)
->>>>>>> Stashed changes
     #  setView('videos')
     xbmcplugin.endOfDirectory(addon_handle) 
-
 def ListKanaly():
-    items = CANALvod().TVinit()
+    items  = CANALvod().TVinit()
     if items:
-        fold = True
-        mud = 'listContent'
-        ispla = False
+        fold=True
+        mud='listContent'
+        ispla=False
         for item in items:
             if item['typ'] == 'live':
-                fold = False
-                mud = 'playCANvod'
-                ispla = True
+                fold=False
+                mud='playCANvod'
+                ispla=True
             add_item(item['url'], item['title'], item['image'], mud, folder=fold, IsPlayable=ispla, infoLabels={'title':item['title'], 'image': item['image'], 'plot':item['plot']},fanart=FANART)
 
     xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_NONE, label2Mask = "%Y")
+
     xbmcplugin.endOfDirectory(addon_handle) 
 
-def KreatorM3U():
+def GenList():
     import playlist
     dialog = xbmcgui.Dialog()
     addon = xbmcaddon.Addon()
@@ -195,14 +167,14 @@ def KreatorM3U():
     count = 1
     items  = CANALvod().TVinit()
     if items:
-        fold = True
-        mud = 'listContent'
-        ispla = False
+        fold=True
+        mud='listContent'
+        ispla=False
         for item in items:
             if item['typ'] == 'live':
-                fold = False
-                mud = 'playCANvod'
-                ispla = True
+                fold=False
+                mud='playCANvod'
+                ispla=True
             title = item['title'].lower()
             grouptitle = "INNE"
             if title.__contains__("canal") | title.__contains__("hbo") | title.__contains__("film") | title.__contains__("kino") | title.__contains__("paramount") | title.__contains__("tnt"):
@@ -265,6 +237,7 @@ def PLAYvodCANAL(urlid):
 
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
         'Accept': '*/*',
+
         'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
     }
     
@@ -275,33 +248,22 @@ def PLAYvodCANAL(urlid):
         'Origin': 'https://www.canalplus.com',
         'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
     }
-
-    response = requests.get(url, headers=headers, verify=False ).text
+    response = requests.get(url, headers=headers,verify=False ).text
     if '.wsx?' in url:
+    
         str_url = re.findall('src="([^"]+)"',response)[0]
     else:
-        try:
-            dt = json.loads(response)
-            str_url = dt.get("dvr", None).get('src', None)
-        except:
-            pre_regex = re.compile(r'<pre>(.*?)</pre>')
-            r = pre_regex.search(response)
-            msg = r.group(1) if r else response
-            xbmcgui.Dialog().ok('Canal+ VOD Error', msg)
-            return
+        dt=json.loads(response)
+        str_url = dt.get("dvr",None).get('src',None)
 
-    stream_url = requests.get(str_url, headers=headers2, verify=False ).url
+    stream_url = requests.get(str_url, headers=headers2,verify=False ).url
+    
     stream_url = re.sub('(\?token.+?)$','/manifest',stream_url)
     #xbmc.log('@#@requests: %s' % str(url), LOGNOTICE)
-<<<<<<< Updated upstream
     
     
     data = quote('{"ServiceRequest":{"InData":{"EpgId":'+id_+',"Mode":"MKPL","LiveToken":"'+ CANALvod().LIVEtoken+'","UserKeyId":"'+CANALvod().DEVICE_ID+'","DeviceKeyId":"'+CANALvod().DEVID+'","ChallengeInfo":"b{SSM}"}}}')
 
-=======
-    
-    data = quote('{"ServiceRequest":{"InData":{"EpgId":'+id_+',"Mode":"MKPL","LiveToken":"'+ CANALvod().LIVEtoken+'","UserKeyId":"'+CANALvod().DEVICE_ID+'","DeviceKeyId":"'+CANALvod().DEVID+'","ChallengeInfo":"b{SSM}"}}}')
->>>>>>> Stashed changes
     
     headers3 = {
         'Host': 'secure-webtv.canal-plus.com',
@@ -315,43 +277,35 @@ def PLAYvodCANAL(urlid):
 
         'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8',
     }
+    import ssl
+    try:
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+    else:
+        ssl._create_default_https_context = _create_unverified_https_context
+ 
+    
     
     PROTOCOL = 'mpd'
     DRM = 'com.widevine.alpha'
 
-<<<<<<< Updated upstream
     PROXY_PATH='http://127.0.0.1:%s/licensetv='%(proxyport)
-=======
-    PROXY_PATH = 'http://127.0.0.1:%s/licensetv='%(proxyport)
->>>>>>> Stashed changes
 
     offer_zone = 0
     drm_id = 0
 
-<<<<<<< Updated upstream
     abtv= "https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/31/apps/1/jobs/GetLicence"
-=======
-    abtv = "https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/31/apps/1/jobs/GetLicence"
->>>>>>> Stashed changes
     set_setting('heatv', str(headers3))
     set_setting('lictvurl', str(abtv))
 
     url = PROXY_PATH + abtv
 
     LICKEY =  url+"|"+urlencode(headers3)+"|"+data+"|B"
-<<<<<<< Updated upstream
     
     is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
     if is_helper.check_inputstream():
         play_item = xbmcgui.ListItem(path=stream_url)#
-=======
-
-    certificate_data = base64.b64encode(requests.get('https://secure-webtv-static.canal-plus.com/widevine/cert/cert_license_widevine_com.bin').content).decode('utf-8')
-
-    is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
-    if is_helper.check_inputstream():
-        play_item = xbmcgui.ListItem(path=stream_url)
->>>>>>> Stashed changes
         play_item.setMimeType('application/dash+xml')
         play_item.setContentLookup(False)
         
@@ -365,21 +319,28 @@ def PLAYvodCANAL(urlid):
         play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
         play_item.setProperty('inputstream.adaptive.license_type', DRM)
         play_item.setProperty('inputstream.adaptive.license_key',LICKEY) 
-<<<<<<< Updated upstream
        # play_item.setProperty('inputstream.adaptive.play_timeshift_buffer', 'true')
-=======
-        if get_setting('drmcert') == 'true':
-            play_item.setProperty('inputstream.adaptive.server_certificate',certificate_data)
->>>>>>> Stashed changes
 
         xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)    
+    
 
 def PLAYvod2(urlid):
     HAPI_BASE_URL = 'https://secure-gen-hapi.canal-plus.com'
+    import ssl
+    try:
+        _create_unverified_https_context = ssl._create_unverified_context
+    except AttributeError:
+        pass
+    else:
+        ssl._create_default_https_context = _create_unverified_https_context
+    
+    
     HAPI_BASE_URL2 = 'https://secure-mycanal-player-pc-ws3.canal-plus.com'
 
     URL_VIDEO_DATAS = 'https://secure-gen-hapi.canal-plus.com/conso/playset/unit/%s'
+    
     URL_STREAM_DATAS = 'https://secure-gen-hapi.canal-plus.com/conso/view'
+    
     URL_DEVICE_ID = 'https://pass.canal-plus.com/service/HelloJSON.php'
 
     video_id = urlid.split('|')[-1]
@@ -405,13 +366,15 @@ def PLAYvod2(urlid):
         'Connection': 'keep-alive',}
 
     URL_VIDEO_DATAS2='https://secure-gen-hapi.canal-plus.com/conso/playset/unit/%s'%(video_id)
+    
 
-    # z chrome
+    
+    ###z chrome
     URL_VIDEO_DATASx = URL_VIDEO_DATAS % video_id
     xbmc.log('@#@URL_VIDEO_DATAS: %s' % str(URL_VIDEO_DATASx), LOGNOTICE)
 
-    value_datas_json = sess.get(URL_VIDEO_DATAS2, headers=headers, verify=False )
-    a = value_datas_json.text
+    value_datas_json = sess.get(URL_VIDEO_DATAS2, headers=headers,verify=False )
+    a= value_datas_json.text
 
     value_datas_jsonparser = json.loads(value_datas_json.text)
 
@@ -450,23 +413,14 @@ def PLAYvod2(urlid):
         'contentType':distMode_value
     }
 
-<<<<<<< Updated upstream
     resp_stream_datas = sess.put(URL_STREAM_DATAS, json=payload, headers=headers,verify=False)
-=======
-    resp_stream_datas = sess.put(URL_STREAM_DATAS, json=payload, headers=headers, verify=False)
->>>>>>> Stashed changes
     jsonparser_stream_datas = json.loads(resp_stream_datas.text)
-    resp_real_stream_datas = sess.get(HAPI_BASE_URL + jsonparser_stream_datas['@medias'], headers=headers, verify=False)
-    jsonparser_real_stream_datas = json.loads(resp_real_stream_datas.text)
 
-<<<<<<< Updated upstream
     resp_real_stream_datas = sess.get(HAPI_BASE_URL+jsonparser_stream_datas['@medias'], headers=headers,verify=False)
 
     jsonparser_real_stream_datas = json.loads(resp_real_stream_datas.text)
 
     
-=======
->>>>>>> Stashed changes
     stream_urls = jsonparser_real_stream_datas[0]['files']
     for st_url in stream_urls:
         if '.ism' in st_url["distribURL"]:
@@ -474,13 +428,16 @@ def PLAYvod2(urlid):
         else:
             continue
 
+    
+
     headers2 = {
-        'Accept': quote('application/json, text/plain, */*'),
-        'Authorization': value_pass_token,
+        'Accept':
+        quote('application/json, text/plain, */*'),
+        'Authorization':
+        value_pass_token,
         'Content-Type':
         'text/plain',
         'User-Agent': quote('Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0'),
-<<<<<<< Updated upstream
         'XX-DEVICE':
         'pc %s' % CANALvod().DEVID,
         'XX-DOMAIN':
@@ -491,29 +448,18 @@ def PLAYvod2(urlid):
         '0',
         'XX-SERVICE':
         'mycanal',
-=======
-        'XX-DEVICE': 'pc %s' % CANALvod().DEVID,
-        'XX-DOMAIN': 'cppol',
-        'XX-OPERATOR': 'pc',
-        'XX-Profile-Id': '0',
-        'XX-SERVICE': 'mycanal',
->>>>>>> Stashed changes
     }
 
     PROTOCOL = 'ism'
     DRM = 'com.widevine.alpha'
-
     is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
-
-    PROXY_PATH = 'http://127.0.0.1:%s/license=' % (proxyport)
-    ab = HAPI_BASE_URL+jsonparser_stream_datas['@licence']+ '?drmType=DRM_WIDEVINE' 
-
+    PROXY_PATH='http://127.0.0.1:%s/license='%(proxyport)
+    ab= HAPI_BASE_URL+jsonparser_stream_datas['@licence']+ '?drmType=DRM_WIDEVINE' 
     set_setting('hea', str(headers2))
     set_setting('licurl', str(ab))
-
     url = PROXY_PATH + ab
     if is_helper.check_inputstream():
-        play_item = xbmcgui.ListItem(path=stream_url)
+        play_item = xbmcgui.ListItem(path=stream_url)#
 
         play_item.setContentLookup(False)
         if sys.version_info >= (3,0,0):
@@ -524,9 +470,12 @@ def PLAYvod2(urlid):
         play_item.setProperty("IsPlayable", "true")
         play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
         play_item.setProperty('inputstream.adaptive.license_type', DRM)
+        
+        
         play_item.setProperty('inputstream.adaptive.license_key',url + '|%s|b{SSM}|B' % urlencode(headers2) )
 
     xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
+    
 
 def getInfoLabel(item):
     out={}
@@ -536,45 +485,49 @@ def getInfoLabel(item):
     return out
     
 def ListDemand(url):
+
     items  = CANALvod().getContentDemand(url)
     if items:
+
         for item in items:
             inflabel = getInfoLabel(item)
 
             if item['typ'] == 'VoD':
-                fold = False
-                mud ='playCANvod2'
-                ispla = True
+                fold=False
+                mud='playCANvod2'
+                ispla=True
             else:
-                fold = True
-                mud = 'listContent'
-                ispla = False
-            img1 = item['image'] if item['image'] else ikona
+                fold=True
+                mud='listContent'
+                ispla=False
+            img1 =     item['image'] if item['image'] else ikona
             if not 'objectType=person' in item['url']:
-                add_item(item['url'], item['title'], img1, mud, folder=fold, IsPlayable=ispla, infoLabels=inflabel, fanart=FANART)
+                add_item(item['url'], item['title'], img1, mud, folder=fold, IsPlayable=ispla, infoLabels=inflabel,fanart=FANART)
         if mud != 'listContent':
             setView('movies')
 
     xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_NONE, label2Mask = "%Y")
+
     xbmcplugin.endOfDirectory(addon_handle) 
+    
     
 def getOuts(typ):
     import base64
-    filmyout = 'W3sicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV3N6eXN0a2llIGZpbG15IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZ3c3p5c3RraWUtZmlsbXklMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktYWxsfG5jcGx1cy1vdWFoLWZpbG15LWFsbCIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1hbGwvbmNwbHVzLW91YWgvU1REL3dzenlzdGtpZWZpbG15IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJBa2NqYSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGYWtjamElMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktYWtjaml8bmNwbHVzLW91YWgtZmlsbXktYWtjamkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktYWtjamkvbmNwbHVzLW91YWgvU1REL0FrY2ppIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJQcnp5Z29kb3d5IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZwcnp5Z29kb3d5JTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtcHJ6eWdvZG93eXxuY3BsdXMtb3VhaC1maWxteS1tZW51LXByenlnb2Rvd3kiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1wcnp5Z29kb3d5L25jcGx1cy1vdWFoL1NURC9Qcnp5Z29kb3d5IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJLb21lZGllIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZrb21lZGllJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LWtvbWVkaWF8bmNwbHVzLW91YWgtZmlsbXkta29tZWRpYSIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1rb21lZGlhL25jcGx1cy1vdWFoL1NURC9Lb21lZGlhIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJSb21hbnMiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRnJvbWFucyUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1yb21hbnN8bmNwbHVzLW91YWgtZmlsbXktcm9tYW5zIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LXJvbWFucy9uY3BsdXMtb3VhaC9TVEQvUm9tYW5zIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJEcmFtYXQiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRmRyYW1hdCUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LWRyYW1hdHxuY3BsdXMtb3VhaC1maWxteS1tZW51LWRyYW1hdCIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1tZW51LWRyYW1hdC9uY3BsdXMtb3VhaC9TVEQvRHJhbWF0IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJLb21lZGlvZHJhbWF0IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZrb21lZGlvZHJhbWF0JTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUta29tZWRpb2RyYW1hdHxuY3BsdXMtb3VhaC1maWxteS1tZW51LWtvbWVkaW9kcmFtYXQiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1rb21lZGlvZHJhbWF0L25jcGx1cy1vdWFoL1NURC9Lb21lZGlvZHJhbWF0IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJLcnltaW5hXHUwMTQyICYgVGhyaWxsZXIiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRmtyeW1pbmFsLXRocmlsbGVyJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LWtyeW1pbmFsfG5jcGx1cy1vdWFoLWZpbG15LWtyeW1pbmFsIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LWtyeW1pbmFsL25jcGx1cy1vdWFoL1NURC9UaHJpbGxlciIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiT2J5Y3pham93eSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGb2J5Y3pham93eSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LW9ieWN6YWpvd3l8bmNwbHVzLW91YWgtZmlsbXktbWVudS1vYnljemFqb3d5IiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtb2J5Y3pham93eS9uY3BsdXMtb3VhaC9TVEQvT2J5Y3pham93eSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiRmFtaWxpam55IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZmYW1pbGlqbnklMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW1pbGlqbnl8bmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW1pbGlqbnkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW1pbGlqbnkvbmNwbHVzLW91YWgvU1REL0ZhbWlsaWpueSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiRGxhIGR6aWVjaSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGZGxhLWR6aWVjaSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1kemllY2l8bmNwbHVzLW91YWgtZmlsbXktZHppZWNpIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LWR6aWVjaS9uY3BsdXMtb3VhaC9TVEQvRGxhZHppZWNpIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJNdXNpY2FsIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZtdXNpY2FsJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtbXVzaWNhbHxuY3BsdXMtb3VhaC1maWxteS1tZW51LW11c2ljYWwiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1tdXNpY2FsL25jcGx1cy1vdWFoL1NURC9NdXNpY2FsIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJEb2t1bWVudCIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGZG9rdW1lbnQlMkZoJTJGbmNwbHVzLW91YWgtZG9rdW1lbnQtZmlsbXl8bmNwbHVzLW91YWgtZG9rdW1lbnQtZmlsbXkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZG9rdW1lbnQtZmlsbXkvbmNwbHVzLW91YWgvU1REL0Rva3VtZW50IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJNZWxvZHJhbWF0IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZtZWxvZHJhbWF0JTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtbWVsb2RyYW1hdHxuY3BsdXMtb3VhaC1maWxteS1tZW51LW1lbG9kcmFtYXQiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1tZWxvZHJhbWF0L25jcGx1cy1vdWFoL1NURC9NZWxvZHJhbWF0IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJCaW9ncmFmaWUiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRmJpb2dyYWZpZSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LWhpc3Rvcnljem55fG5jcGx1cy1vdWFoLWZpbG15LW1lbnUtaGlzdG9yeWN6bnkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1oaXN0b3J5Y3pueS9uY3BsdXMtb3VhaC9TVEQvSGlzdG9yeWN6bnkiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNjaWVuY2UgZmljdGlvbiIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2NpZW5jZS1maWN0aW9uJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtc2NpZW5jZWZpY3Rpb258bmNwbHVzLW91YWgtZmlsbXktbWVudS1zY2llbmNlZmljdGlvbiIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1tZW51LXNjaWVuY2VmaWN0aW9uL25jcGx1cy1vdWFoL1NURC9zY2llbmNlZmljdGlvbiIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiRmFudGFzeSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGZmFudGFzeSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LWZhbnRhc3l8bmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW50YXN5IiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtZmFudGFzeS9uY3BsdXMtb3VhaC9TVEQvRmFudGFzeSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV2VzdGVybiIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGd2VzdGVybiUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LXdlc3Rlcm58bmNwbHVzLW91YWgtZmlsbXktbWVudS13ZXN0ZXJuIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtd2VzdGVybi9uY3BsdXMtb3VhaC9TVEQvV2VzdGVybiIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV29qZW5ueSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGd29qZW5ueSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LXdvamVubnl8bmNwbHVzLW91YWgtZmlsbXktbWVudS13b2plbm55IiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtd29qZW5ueS9uY3BsdXMtb3VhaC9TVEQvd29qZW5ueSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiSG9ycm9yIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZob3Jyb3IlMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktbWVudS1ob3Jyb3J8bmNwbHVzLW91YWgtZmlsbXktbWVudS1ob3Jyb3IiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1ob3Jyb3IvbmNwbHVzLW91YWgvU1REL0hvcnJvciIsICJ0eXAiOiAiZm9sZGVyIn1d'
-    serout = 'W3sicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV3N6eXN0a2llIHNlcmlhbGUiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGd3N6eXN0a2llLXNlcmlhbGUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1hbGx8bmNwbHVzLW91YWgtc2VyaWFsZS1hbGwiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1hbGwvbmNwbHVzLW91YWgvU1REL3dzenlzdGtpZXNlcmlhbGUiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIkNBTkFMKyBPcnlnaW5hbG5lIHByb2R1a2NqZSAiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGY2FuYWwtb3J5Z2luYWxuZS1wcm9kdWtjamUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1wcm9kdWtjamUtb3J5Z2luYWxuZXxuY3BsdXMtb3VhaC1zZXJpYWxlLXByb2R1a2NqZS1vcnlnaW5hbG5lIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUtcHJvZHVrY2plLW9yeWdpbmFsbmUvbmNwbHVzLW91YWgvU1REL1Byb2R1a2NqZW9yeWdpbmFsbmUiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNlcmlhbGUgb2J5Y3pham93ZSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA1MzQ0Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtc2VyaWFsZS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZzZXJpYWxlLW9ieWN6YWpvd2UlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LW9ieWN6YWpvd2V8bmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LW9ieWN6YWpvd2UiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LW9ieWN6YWpvd2UvbmNwbHVzLW91YWgvU1RELzYiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNlcmlhbGUga3J5bWluYWxuZSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA1MzQ0Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtc2VyaWFsZS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZzZXJpYWxlLWtyeW1pbmFsbmUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1rcnltaW5hbHxuY3BsdXMtb3VhaC1zZXJpYWxlLWtyeW1pbmFsIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUta3J5bWluYWwvbmNwbHVzLW91YWgvU1RELzgiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNlcmlhbGUga29tZWRpb3dlIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDUzNDQuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1zZXJpYWxlLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRnNlcmlhbGUta29tZWRpb3dlJTJGaCUyRm5jcGx1cy1vdWFoLXNlcmlhbGUta29tZWRpYXxuY3BsdXMtb3VhaC1zZXJpYWxlLWtvbWVkaWEiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1rb21lZGlhL25jcGx1cy1vdWFoL1NURC8zIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJTZXJpYWxlIGFuaW1vd2FuZSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA1MzQ0Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtc2VyaWFsZS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZzZXJpYWxlLWFuaW1vd2FuZSUyRmglMkZuY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUtYW5pbW93YW5lfG5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1hbmltb3dhbmUiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LWFuaW1vd2FuZS9uY3BsdXMtb3VhaC9TVEQvQW5pbW93YW5lIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJTZXJpYWxlIHByenlnb2Rvd2UiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2VyaWFsZS1wcnp5Z29kb3dlJTJGaCUyRm5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1wcnp5Z29kb3dlfG5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1wcnp5Z29kb3dlIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1wcnp5Z29kb3dlL25jcGx1cy1vdWFoL1NURC81IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJTZXJpYWxlIGhpc3Rvcnljem5lIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDUzNDQuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1zZXJpYWxlLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRnNlcmlhbGUtaGlzdG9yeWN6bmUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LWhpc3Rvcnljem55fG5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1oaXN0b3J5Y3pueSIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUtaGlzdG9yeWN6bnkvbmNwbHVzLW91YWgvU1REL0hpc3Rvcnljem5lMSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiU2VyaWFsZSBkb2t1bWVudGFsbmUiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2VyaWFsZS1kb2t1bWVudGFsbmUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1kb2t1bWVudGFsbmV8bmNwbHVzLW91YWgtc2VyaWFsZS1kb2t1bWVudGFsbmUiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1kb2t1bWVudGFsbmUvbmNwbHVzLW91YWgvU1REL0Rva3VtZW50YWxueSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiU2VyaWFsZSBTY2llbmNlIGZpY3Rpb24iLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2VyaWFsZS1zY2llbmNlLWZpY3Rpb24lMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1zY2lmaXxuY3BsdXMtb3VhaC1zZXJpYWxlLXNjaWZpIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUtc2NpZmkvbmNwbHVzLW91YWgvU1REL3NjaWVuY2VmaWN0aW9uIiwgInR5cCI6ICJmb2xkZXIifV0='
+    filmyout='W3sicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV3N6eXN0a2llIGZpbG15IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZ3c3p5c3RraWUtZmlsbXklMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktYWxsfG5jcGx1cy1vdWFoLWZpbG15LWFsbCIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1hbGwvbmNwbHVzLW91YWgvU1REL3dzenlzdGtpZWZpbG15IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJBa2NqYSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGYWtjamElMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktYWtjaml8bmNwbHVzLW91YWgtZmlsbXktYWtjamkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktYWtjamkvbmNwbHVzLW91YWgvU1REL0FrY2ppIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJQcnp5Z29kb3d5IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZwcnp5Z29kb3d5JTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtcHJ6eWdvZG93eXxuY3BsdXMtb3VhaC1maWxteS1tZW51LXByenlnb2Rvd3kiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1wcnp5Z29kb3d5L25jcGx1cy1vdWFoL1NURC9Qcnp5Z29kb3d5IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJLb21lZGllIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZrb21lZGllJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LWtvbWVkaWF8bmNwbHVzLW91YWgtZmlsbXkta29tZWRpYSIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1rb21lZGlhL25jcGx1cy1vdWFoL1NURC9Lb21lZGlhIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJSb21hbnMiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRnJvbWFucyUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1yb21hbnN8bmNwbHVzLW91YWgtZmlsbXktcm9tYW5zIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LXJvbWFucy9uY3BsdXMtb3VhaC9TVEQvUm9tYW5zIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJEcmFtYXQiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRmRyYW1hdCUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LWRyYW1hdHxuY3BsdXMtb3VhaC1maWxteS1tZW51LWRyYW1hdCIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1tZW51LWRyYW1hdC9uY3BsdXMtb3VhaC9TVEQvRHJhbWF0IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJLb21lZGlvZHJhbWF0IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZrb21lZGlvZHJhbWF0JTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUta29tZWRpb2RyYW1hdHxuY3BsdXMtb3VhaC1maWxteS1tZW51LWtvbWVkaW9kcmFtYXQiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1rb21lZGlvZHJhbWF0L25jcGx1cy1vdWFoL1NURC9Lb21lZGlvZHJhbWF0IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJLcnltaW5hXHUwMTQyICYgVGhyaWxsZXIiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRmtyeW1pbmFsLXRocmlsbGVyJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LWtyeW1pbmFsfG5jcGx1cy1vdWFoLWZpbG15LWtyeW1pbmFsIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LWtyeW1pbmFsL25jcGx1cy1vdWFoL1NURC9UaHJpbGxlciIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiT2J5Y3pham93eSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGb2J5Y3pham93eSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LW9ieWN6YWpvd3l8bmNwbHVzLW91YWgtZmlsbXktbWVudS1vYnljemFqb3d5IiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtb2J5Y3pham93eS9uY3BsdXMtb3VhaC9TVEQvT2J5Y3pham93eSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiRmFtaWxpam55IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZmYW1pbGlqbnklMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW1pbGlqbnl8bmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW1pbGlqbnkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW1pbGlqbnkvbmNwbHVzLW91YWgvU1REL0ZhbWlsaWpueSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiRGxhIGR6aWVjaSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGZGxhLWR6aWVjaSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1kemllY2l8bmNwbHVzLW91YWgtZmlsbXktZHppZWNpIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LWR6aWVjaS9uY3BsdXMtb3VhaC9TVEQvRGxhZHppZWNpIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJNdXNpY2FsIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZtdXNpY2FsJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtbXVzaWNhbHxuY3BsdXMtb3VhaC1maWxteS1tZW51LW11c2ljYWwiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1tdXNpY2FsL25jcGx1cy1vdWFoL1NURC9NdXNpY2FsIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJEb2t1bWVudCIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGZG9rdW1lbnQlMkZoJTJGbmNwbHVzLW91YWgtZG9rdW1lbnQtZmlsbXl8bmNwbHVzLW91YWgtZG9rdW1lbnQtZmlsbXkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZG9rdW1lbnQtZmlsbXkvbmNwbHVzLW91YWgvU1REL0Rva3VtZW50IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJNZWxvZHJhbWF0IiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZtZWxvZHJhbWF0JTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtbWVsb2RyYW1hdHxuY3BsdXMtb3VhaC1maWxteS1tZW51LW1lbG9kcmFtYXQiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1tZWxvZHJhbWF0L25jcGx1cy1vdWFoL1NURC9NZWxvZHJhbWF0IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJCaW9ncmFmaWUiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNDgxOS5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLWZpbG0tMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLWZpbG15LW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRmJpb2dyYWZpZSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LWhpc3Rvcnljem55fG5jcGx1cy1vdWFoLWZpbG15LW1lbnUtaGlzdG9yeWN6bnkiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1oaXN0b3J5Y3pueS9uY3BsdXMtb3VhaC9TVEQvSGlzdG9yeWN6bnkiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNjaWVuY2UgZmljdGlvbiIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2NpZW5jZS1maWN0aW9uJTJGaCUyRm5jcGx1cy1vdWFoLWZpbG15LW1lbnUtc2NpZW5jZWZpY3Rpb258bmNwbHVzLW91YWgtZmlsbXktbWVudS1zY2llbmNlZmljdGlvbiIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1maWxteS1tZW51LXNjaWVuY2VmaWN0aW9uL25jcGx1cy1vdWFoL1NURC9zY2llbmNlZmljdGlvbiIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiRmFudGFzeSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGZmFudGFzeSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LWZhbnRhc3l8bmNwbHVzLW91YWgtZmlsbXktbWVudS1mYW50YXN5IiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtZmFudGFzeS9uY3BsdXMtb3VhaC9TVEQvRmFudGFzeSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV2VzdGVybiIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGd2VzdGVybiUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LXdlc3Rlcm58bmNwbHVzLW91YWgtZmlsbXktbWVudS13ZXN0ZXJuIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtd2VzdGVybi9uY3BsdXMtb3VhaC9TVEQvV2VzdGVybiIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV29qZW5ueSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA0ODE5Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtZmlsbS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtZmlsbXktbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGd29qZW5ueSUyRmglMkZuY3BsdXMtb3VhaC1maWxteS1tZW51LXdvamVubnl8bmNwbHVzLW91YWgtZmlsbXktbWVudS13b2plbm55IiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLWZpbG15LW1lbnUtd29qZW5ueS9uY3BsdXMtb3VhaC9TVEQvd29qZW5ueSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiSG9ycm9yIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDQ4MTkuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1maWxtLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1maWxteS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZob3Jyb3IlMkZoJTJGbmNwbHVzLW91YWgtZmlsbXktbWVudS1ob3Jyb3J8bmNwbHVzLW91YWgtZmlsbXktbWVudS1ob3Jyb3IiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtZmlsbXktbWVudS1ob3Jyb3IvbmNwbHVzLW91YWgvU1REL0hvcnJvciIsICJ0eXAiOiAiZm9sZGVyIn1d'
+    serout='W3sicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiV3N6eXN0a2llIHNlcmlhbGUiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGd3N6eXN0a2llLXNlcmlhbGUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1hbGx8bmNwbHVzLW91YWgtc2VyaWFsZS1hbGwiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1hbGwvbmNwbHVzLW91YWgvU1REL3dzenlzdGtpZXNlcmlhbGUiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIkNBTkFMKyBPcnlnaW5hbG5lIHByb2R1a2NqZSAiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGY2FuYWwtb3J5Z2luYWxuZS1wcm9kdWtjamUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1wcm9kdWtjamUtb3J5Z2luYWxuZXxuY3BsdXMtb3VhaC1zZXJpYWxlLXByb2R1a2NqZS1vcnlnaW5hbG5lIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUtcHJvZHVrY2plLW9yeWdpbmFsbmUvbmNwbHVzLW91YWgvU1REL1Byb2R1a2NqZW9yeWdpbmFsbmUiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNlcmlhbGUgb2J5Y3pham93ZSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA1MzQ0Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtc2VyaWFsZS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZzZXJpYWxlLW9ieWN6YWpvd2UlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LW9ieWN6YWpvd2V8bmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LW9ieWN6YWpvd2UiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LW9ieWN6YWpvd2UvbmNwbHVzLW91YWgvU1RELzYiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNlcmlhbGUga3J5bWluYWxuZSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA1MzQ0Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtc2VyaWFsZS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZzZXJpYWxlLWtyeW1pbmFsbmUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1rcnltaW5hbHxuY3BsdXMtb3VhaC1zZXJpYWxlLWtyeW1pbmFsIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUta3J5bWluYWwvbmNwbHVzLW91YWgvU1RELzgiLCAidHlwIjogImZvbGRlciJ9LCB7InBsb3QiOiAiIiwgImNvZGUiOiAiIiwgInRpdGxlIjogIlNlcmlhbGUga29tZWRpb3dlIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDUzNDQuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1zZXJpYWxlLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRnNlcmlhbGUta29tZWRpb3dlJTJGaCUyRm5jcGx1cy1vdWFoLXNlcmlhbGUta29tZWRpYXxuY3BsdXMtb3VhaC1zZXJpYWxlLWtvbWVkaWEiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1rb21lZGlhL25jcGx1cy1vdWFoL1NURC8zIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJTZXJpYWxlIGFuaW1vd2FuZSIsICJ1cmwiOiAiaHR0cHM6Ly9ob2Rvci5jYW5hbHBsdXMucHJvL2FwaS92Mi9teWNhbmFsaW50L3BhZ2Uve30vMTA1MzQ0Lmpzb24/cGFyYW1zJTVCZGV0YWlsVHlwZSU1RD1jb250ZW50R3JpZCZvYmplY3RUeXBlPWxpc3QmcGFyYW1zJTVCZHNwJTVEPWdhYmFyaXRMaXN0JnBhcmFtcyU1QnNkbSU1RD1zaG93JnRpdGxlRGlzcGxheU1vZGU9bm9uZSZwcmV2aW91c0NvbnRleHREZXRhaWw9aW50ZXItdGhlbWUtc2VyaWFsZS0yLWNvbnRlbnRyb3ctbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51JnBhcmFtcyU1QnRhYiU1RD0lMkZzZXJpYWxlLWFuaW1vd2FuZSUyRmglMkZuY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUtYW5pbW93YW5lfG5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1hbmltb3dhbmUiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LWFuaW1vd2FuZS9uY3BsdXMtb3VhaC9TVEQvQW5pbW93YW5lIiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJTZXJpYWxlIHByenlnb2Rvd2UiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2VyaWFsZS1wcnp5Z29kb3dlJTJGaCUyRm5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1wcnp5Z29kb3dlfG5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1wcnp5Z29kb3dlIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1wcnp5Z29kb3dlL25jcGx1cy1vdWFoL1NURC81IiwgInR5cCI6ICJmb2xkZXIifSwgeyJwbG90IjogIiIsICJjb2RlIjogIiIsICJ0aXRsZSI6ICJTZXJpYWxlIGhpc3Rvcnljem5lIiwgInVybCI6ICJodHRwczovL2hvZG9yLmNhbmFscGx1cy5wcm8vYXBpL3YyL215Y2FuYWxpbnQvcGFnZS97fS8xMDUzNDQuanNvbj9wYXJhbXMlNUJkZXRhaWxUeXBlJTVEPWNvbnRlbnRHcmlkJm9iamVjdFR5cGU9bGlzdCZwYXJhbXMlNUJkc3AlNUQ9Z2FiYXJpdExpc3QmcGFyYW1zJTVCc2RtJTVEPXNob3cmdGl0bGVEaXNwbGF5TW9kZT1ub25lJnByZXZpb3VzQ29udGV4dERldGFpbD1pbnRlci10aGVtZS1zZXJpYWxlLTItY29udGVudHJvdy1uY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUmcGFyYW1zJTVCdGFiJTVEPSUyRnNlcmlhbGUtaGlzdG9yeWN6bmUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1tZW51LWhpc3Rvcnljem55fG5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudS1oaXN0b3J5Y3pueSIsICJpbWFnZSI6ICJodHRwczovL3RodW1iLmNhbmFscGx1cy5wcm8vaHR0cC91bnNhZmUve3Jlc29sdXRpb25YWX0vZmlsdGVyczpxdWFsaXR5KDcwKS9uY3BsdXMtY2RuLmNhbmFsLXBsdXMuaW8vcDEvbGlzdC9uY3BsdXMtb3VhaC1zZXJpYWxlLW1lbnUtaGlzdG9yeWN6bnkvbmNwbHVzLW91YWgvU1REL0hpc3Rvcnljem5lMSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiU2VyaWFsZSBkb2t1bWVudGFsbmUiLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2VyaWFsZS1kb2t1bWVudGFsbmUlMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1kb2t1bWVudGFsbmV8bmNwbHVzLW91YWgtc2VyaWFsZS1kb2t1bWVudGFsbmUiLCAiaW1hZ2UiOiAiaHR0cHM6Ly90aHVtYi5jYW5hbHBsdXMucHJvL2h0dHAvdW5zYWZlL3tyZXNvbHV0aW9uWFl9L2ZpbHRlcnM6cXVhbGl0eSg3MCkvbmNwbHVzLWNkbi5jYW5hbC1wbHVzLmlvL3AxL2xpc3QvbmNwbHVzLW91YWgtc2VyaWFsZS1kb2t1bWVudGFsbmUvbmNwbHVzLW91YWgvU1REL0Rva3VtZW50YWxueSIsICJ0eXAiOiAiZm9sZGVyIn0sIHsicGxvdCI6ICIiLCAiY29kZSI6ICIiLCAidGl0bGUiOiAiU2VyaWFsZSBTY2llbmNlIGZpY3Rpb24iLCAidXJsIjogImh0dHBzOi8vaG9kb3IuY2FuYWxwbHVzLnByby9hcGkvdjIvbXljYW5hbGludC9wYWdlL3t9LzEwNTM0NC5qc29uP3BhcmFtcyU1QmRldGFpbFR5cGUlNUQ9Y29udGVudEdyaWQmb2JqZWN0VHlwZT1saXN0JnBhcmFtcyU1QmRzcCU1RD1nYWJhcml0TGlzdCZwYXJhbXMlNUJzZG0lNUQ9c2hvdyZ0aXRsZURpc3BsYXlNb2RlPW5vbmUmcHJldmlvdXNDb250ZXh0RGV0YWlsPWludGVyLXRoZW1lLXNlcmlhbGUtMi1jb250ZW50cm93LW5jcGx1cy1vdWFoLXNlcmlhbGUtbWVudSZwYXJhbXMlNUJ0YWIlNUQ9JTJGc2VyaWFsZS1zY2llbmNlLWZpY3Rpb24lMkZoJTJGbmNwbHVzLW91YWgtc2VyaWFsZS1zY2lmaXxuY3BsdXMtb3VhaC1zZXJpYWxlLXNjaWZpIiwgImltYWdlIjogImh0dHBzOi8vdGh1bWIuY2FuYWxwbHVzLnByby9odHRwL3Vuc2FmZS97cmVzb2x1dGlvblhZfS9maWx0ZXJzOnF1YWxpdHkoNzApL25jcGx1cy1jZG4uY2FuYWwtcGx1cy5pby9wMS9saXN0L25jcGx1cy1vdWFoLXNlcmlhbGUtc2NpZmkvbmNwbHVzLW91YWgvU1REL3NjaWVuY2VmaWN0aW9uIiwgInR5cCI6ICJmb2xkZXIifV0='
 
     if typ=='filmy':
         out=json.loads(base64.b64decode(filmyout))
     else:
         out=json.loads(base64.b64decode(serout))
-
     return out
     
 def ListCateg(typ1):
     itemsx = getOuts(typ1)
     for itemx in itemsx:
-        img1 = itemx['image'] if itemx['image'] else ikona
-    
+        img1 =     itemx['image'] if itemx['image'] else ikona
+
+        
         urlk,contid = (itemx['url']).split('|')
         urlk = urlk.format(CANALvod().CMStoken)
         
@@ -583,12 +536,13 @@ def ListCateg(typ1):
         urlk = re.sub('(\d+\.json)','%s.json'%(str(contid)),urlk)
         inflabel = getInfoLabel(itemx)
 
-        add_item(urlk, PLchar(itemx['title']), img1, 'listContent', folder=True, IsPlayable=False, infoLabels=inflabel, fanart=FANART)
+        add_item(urlk, PLchar(itemx['title']), img1, 'listContent', folder=True, IsPlayable=False, infoLabels=inflabel,fanart=FANART)
     xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_NONE, label2Mask = "%Y")
+    
     xbmcplugin.endOfDirectory(addon_handle) 
-
 def ListContent(url):
-    items, npage  = CANALvod().getContent(url)
+
+    items,npage  = CANALvod().getContent(url)
     if CANALvod().cinemaURL in url and not '|' in url or CANALvod().seriesURL in url and not '|' in url:
         mud = 'listcateg'
         fold = True
@@ -598,32 +552,28 @@ def ListContent(url):
         else:
             urlk = 'seriale'
 
-        ilab = {}
+        ilab={}
         ilab['plot'] = 'Kategorie'
         ilab['title'] = 'Kategorie'
 
-<<<<<<< Updated upstream
         add_item(urlk, 'Kategorie', ikona, mud, folder=fold, IsPlayable=False, infoLabels=ilab,fanart=FANART)
-=======
-        add_item(urlk, 'Kategorie', ikona, mud, folder=fold, IsPlayable=False, infoLabels=ilab, fanart=FANART)
-
->>>>>>> Stashed changes
     if items:
+    
         for item in items:
             inflabel = getInfoLabel(item)
 
-            if item['typ'] == 'VoD':
-                fold = False
-                mud = 'playCANvod2'
-                ispla = True
-            else:
-                fold = True
-                mud = 'listContent'
-                ispla = False
-            img1 = item['image'] if item['image'] else ikona
-            if not 'objectType=person' in item['url']:
-                add_item(item['url'], item['title'], img1, mud, folder=fold, IsPlayable=ispla, infoLabels=inflabel, fanart=FANART)
 
+            if item['typ'] == 'VoD':
+                fold=False
+                mud='playCANvod2'
+                ispla=True
+            else:
+                fold=True
+                mud='listContent'
+                ispla=False
+            img1 =     item['image'] if item['image'] else ikona
+            if not 'objectType=person' in item['url']:
+                add_item(item['url'], item['title'], img1, mud, folder=fold, IsPlayable=ispla, infoLabels=inflabel,fanart=FANART)
         if mud != 'listContent':
             setView('movies')
         if npage:
@@ -634,41 +584,42 @@ def ListContent(url):
             add_item(npage[0]['url'], npage[0]['title'], '', 'listContent', folder=True, IsPlayable=False, infoLabels=ilab,fanart=FANART)
             
     xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_NONE, label2Mask = "%Y")
+    
     xbmcplugin.endOfDirectory(addon_handle) 
 
 def czas():
-    import datetime
-    now = datetime.datetime.now()
-    czas = now.strftime('%Y-%m-%dT%H:%M:%SZ')
 
+    import datetime 
+    now = datetime.datetime.now()
+    czas=now.strftime('%Y-%m-%dT%H:%M:%SZ')
     from datetime import datetime
-    
+    import time
     try:
-        format_date = datetime.strptime(czas, '%Y-%m-%dT%H:%M:%SZ')
+        format_date=datetime.strptime(czas, '%Y-%m-%dT%H:%M:%SZ')
     except TypeError:
-        format_date = datetime(*(time.strptime(czas, '%Y-%m-%dT%H:%M:%SZ')[0:6]))
+        format_date=datetime(*(time.strptime(czas, '%Y-%m-%dT%H:%M:%SZ')[0:6]))
+        
         
     def to_timestamp(a_date):
         from datetime import datetime
-        
         try:
             import pytz
         except:
             pass
-
         if a_date.tzinfo:
             epoch = datetime(1970, 1, 1, tzinfo=pytz.UTC)
             diff = a_date.astimezone(pytz.UTC) - epoch
         else:
             epoch = datetime(1970, 1, 1)
             diff = a_date - epoch
-
         return int(diff.total_seconds())*1000    
         
+        
+        
     tst4 =     to_timestamp(format_date)
+        
 
     return int(tst4)
-
 def get_addon():
     return addon
 
@@ -687,23 +638,22 @@ def xbmc_sleep(time):
 def getRequests(url, data="", headers={}, params ={}, allo=None):
     if data:
         if allo:
-            content=sess.get(url,headers=headers, data=data, params=params, verify=False ).url
+            content=sess.get(url,headers=headers, data=data, params=params,verify=False ).url
         else:
-            content=sess.post(url,headers=headers,data=data, params=params, verify=False )
+            content=sess.post(url,headers=headers,data=data, params=params,verify=False )#.json()
             try:
                 content=content.json()
             except:
                 content=content.text
     else:
         if allo:
-            content=sess.get(url,headers=headers, params=params, verify=False ).url
+            content=sess.get(url,headers=headers, params=params,verify=False ).url
         else:
-            content=sess.get(url,headers=headers, params=params, verify=False )
+            content=sess.get(url,headers=headers, params=params,verify=False )
             try:
                 content=content.json()
             except:
                 content=content.text
-
     return content
 
 def PLchar(char):
@@ -730,16 +680,19 @@ def PLchar(char):
     return char 
 
 class CANALvod(object):
+
     def __init__(self):
               
         self.OAUTH = 'https://logowanie.pl.canalplus.com/login'#'https://dev.canalplus.com/pl/oauth'
         self.CREATE_TOKEN = 'https://pass-api-v2.canal-plus.com/provider/services/PL/public/createToken'
+        
 
         self.mainLOGINurl = 'https://logowanie.pl.canalplus.com/login'
         self.OAUTH_HEADERS = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                 'Host': 'dev.canalplus.com',}
 
+    
         self.HEADERS2 = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
@@ -762,12 +715,14 @@ class CANALvod(object):
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'Host': 'pass-api-v2.canal-plus.com',
         }
-              
+            
+            
         self.HODORheaders = {
             'Host': 'hodor.canalplus.pro',
             'user-agent': 'myCANAL/ 4.6.6 (440010924) - Android/9 - android - SM-J330F',
         }
- 
+
+            
         self.cinemaURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102783.json"
         self.seriesURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102782.json"
         self.kidsURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102826.json"
@@ -775,13 +730,19 @@ class CANALvod(object):
         self.demandURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102961.json" 
             
         self.searchURL = 'https://hodor.canalplus.pro/api/v2/mycanalint/search/mycanal_channel_discover/{}/query/{}?distmodes=[%22catchup%22,%22svod%22,%22tvod%22]&displayNBOLogo=true'    
+            
+            
+            
         self.documentsURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102964.json"
         self.sportURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102957.json"
+            
 
+            
         #self.kanalyzyczURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/102961.json"
             
         self.serkategURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/105344.json"
         self.serkategURL = "https://hodor.canalplus.pro/api/v2/mycanalint/page/{}/104819.json"
+            
             
         self.CMStoken = get_setting('CMStoken')
             
@@ -797,7 +758,8 @@ class CANALvod(object):
 
         self.LIVEtoken = addon.getSetting('livetoken')
         self.DEVID = addon.getSetting('devid')
-
+            
+            
         self.DEVICE_ID = addon.getSetting('device_id')
         self.CLIENT_ID = addon.getSetting('client_id')
         self.ID_ = addon.getSetting('id_')
@@ -808,6 +770,34 @@ class CANALvod(object):
 
         self.LOGGED = addon.getSetting('logged')
 
+        self.settingsFix()
+
+    def settingsFix(self):
+        from os import sep as osSeparator
+        
+        try:
+            if sys.version_info[0] < 3:
+                copy = xbmcaddon.Addon().getAddonInfo('path') + osSeparator + 'resources' + osSeparator + 'format' + osSeparator + 'settings_py2.xml'
+                dest = xbmcaddon.Addon().getAddonInfo('path') + osSeparator + 'resources' + osSeparator + 'settings.xml'
+
+                stat = os.stat(dest)
+                size = stat.st_size
+                
+                if size > int(1000):
+                    success = xbmcvfs.copy(copy, dest)
+
+            else:
+                copy = xbmcaddon.Addon().getAddonInfo('path') + osSeparator + 'resources' + osSeparator + 'format' + osSeparator + 'settings_py3.xml'
+                dest = xbmcaddon.Addon().getAddonInfo('path') + osSeparator + 'resources' + osSeparator + 'settings.xml'
+
+                stat = os.stat(dest)
+                size = stat.st_size
+
+                if size < int(1754):
+                    success = xbmcvfs.copy(copy, dest)
+        except Exception as ex:
+            xbmc.log('No need to change settings.xml')
+
     def logowanie(self):
         a = self.PASStoken
         v = self.PASSid
@@ -817,6 +807,8 @@ class CANALvod(object):
         e = self.EPGid
 
         if self.LOGGED == 'true':
+        
+           # if not self.PASStoken or not self.PASSid:
             if self.LOGIN and self.PASSWORD and self.LOGUJ == 'true':
                 import time
                 ts = int(time.time())*100
@@ -824,6 +816,7 @@ class CANALvod(object):
                 b = str(czas())
                 if not self.DEVID:
                     self.DEVID = '%s-%s'%( b, self.gen_hex_code(12))
+                
                 
                 headers = {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
@@ -851,15 +844,10 @@ class CANALvod(object):
                         'te': 'trailers',
                     }
                     
-                    data = 'username=' + quote(self.LOGIN) + '&password=' + quote(self.PASSWORD) + '&execution=' + execution + '&_eventId=submit&geolocation='
+                    data = 'username='+quote(self.LOGIN)+'&password='+quote(self.PASSWORD)+'&execution='+execution+'&_eventId=submit&geolocation='
                     
-<<<<<<< Updated upstream
                     response = sess.post(self.mainLOGINurl, headers=headers, data=data,verify=False)
                     av=response.text
-=======
-                    response = sess.post(self.mainLOGINurl, headers=headers, data=data, verify=False)
-                    av = response.text
->>>>>>> Stashed changes
                     adres = re.findall('btn btn-primary.*?href="([^"]+)',response.text,re.DOTALL)
                     if not adres:
                         xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Niepoprawne dane logowania',ikona, 8000,False)
@@ -868,8 +856,8 @@ class CANALvod(object):
                     adres = adres[0].replace('&amp;','&') if adres else ''
 
                     response = sess.get(adres, headers=self.HEADERS2,verify=False)
-                    a1 = response.url
-                    ac = response.cookies
+                    a1= response.url
+                    ac=response.cookies
 
                     try:
                         self.PASSid = ac.get('passId',None)
@@ -877,17 +865,19 @@ class CANALvod(object):
                         self.CMStoken = ac.get('tokenCMS',None)
                     except:
                         pass
+                    a11=self.PASSid
+                    a22=self.PASStoken
+                    a33=self.CMStoken
 
-                    a11 = self.PASSid
-                    a22 = self.PASStoken
-                    a33 = self.CMStoken
+
 
                     authresponse = re.findall('window\.__data\s*=\s*({.*?});.*?window.app_config',response.text,re.DOTALL)
                     
                     data = json.loads(authresponse[0])
+
                     data = data.get('user',None)
 
-                    self.MACROel = data.get("macroEligibility",None)
+                    self.MACROel=data.get("macroEligibility",None)
                     self.MICROel = data.get("microEligibility",None)
                     self.EPGid = data.get('epgidOTT',None)
                     set_setting('PASSid', a11)
@@ -919,69 +909,63 @@ class CANALvod(object):
                         'referer':'https://secure-player.canal-plus.com/one/prod/v2/',
                         'Cookie': 'p_pass_token='+self.PASStoken+'&passId='+self.PASStoken
                     }
-                    
                     resp_device_id = sess.get(URL_DEVICE_ID, headers=header_device_id,verify=False )
-        
-                    self.DEVICE_ID = re.compile(r'deviceId\"\:\"(.*?)\"').findall(resp_device_id.text)[0]
+                    
 
+                    self.DEVICE_ID = re.compile(
+                                r'deviceId\"\:\"(.*?)\"').findall(resp_device_id.text)[0]
                     set_setting('device_id', self.DEVICE_ID)
+                    
+                    
                     
                     LOGGED = 'true'
                     set_setting('logged', LOGGED)
-                    xbmcgui.Dialog().notification('[B]Ok.[/B]', 'Zalogowano poprawnie.',ikona, 8000, False)
-
+                    xbmcgui.Dialog().notification('[B]Ok.[/B]', 'Zalogowano poprawnie.',ikona, 8000,False)
                 else:
                     set_setting('PASSid', self.PASSid)
                     set_setting('PASStoken', self.PASStoken)
                     xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Niepoprawne dane logowania',ikona, 8000,False)
-                    add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False, fanart=FANART)
+                    add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False,fanart=FANART)
             else:
-                xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Brak danych logowania.',ikona, 8000, False)
+                xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Brak danych logowania.',ikona, 8000,False)
 
         elif self.LOGGED != 'true':
-            add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False, fanart=FANART)
+            add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False,fanart=FANART)
         return True
 
     def gen_hex_code(self, myrange=6):
         import random
         return ''.join([random.choice('0123456789abcdef') for x in range(myrange)])
         
+        
     def czs(self, czas, trwa):
+    
+        import time
         import datetime
         try:
             format_date=datetime.datetime.strptime(czas, '%Y-%m-%dT%H:%M:%S.%fZ')
         except TypeError:
             format_date=datetime.datetime(*(time.strptime(czas, '%Y-%m-%dT%H:%M:%S.%fZ')[0:6]))
-
         format_date = format_date+ datetime.timedelta(hours=2)
-        tstampnow = int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
+        tstampnow= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
         durat = tstampnow+(int(trwa)/1000)
         dt_object = datetime.datetime.fromtimestamp(durat)
         pocz = format_date.strftime("%H:%M")
         koniec =  dt_object.strftime("%H:%M")
-
         return pocz,koniec
         
     def getch(self, ch):
-        out = {}
-        fff = ''
+        out={}
+        fff=''
         for event_ in ch['events']:
             starttime = event_["timecodes"][0]["start"]
             try:
                 duration = event_["timecodes"][0]["duration"] 
             except:
                 duration = 0
-<<<<<<< Updated upstream
             pocz, koniec =self.czs(starttime, duration)
             fff+='%s - %s %s [CR]'%(pocz,koniec,PLchar(event_["title"]))
             out['title']=fff
-=======
-
-            pocz, koniec = self.czs(starttime, duration)
-            fff += '%s - %s %s [CR]'%(pocz,koniec, PLchar(event_["title"]))
-            out['title'] = fff
-
->>>>>>> Stashed changes
         return out
         
     def epgLive(self):
@@ -991,12 +975,11 @@ class CANALvod(object):
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         }
         
-        out = {}
-        epgresponse = requests.get('https://secure-webtv-static.canal-plus.com/metadata/cppol/all/v2.2/globalchannels.json',headers=headers, verify=False ).json()
+        out={}
+        epgresponse = requests.get('https://secure-webtv-static.canal-plus.com/metadata/cppol/all/v2.2/globalchannels.json',headers=headers,verify=False ).json()
         for channel in epgresponse['channels']:
             id_ = str(channel['id'])
-            out[id_] = self.getch(channel) 
-
+            out[id_]=self.getch(channel)  
         return out    
 
     def TVinit(self):
@@ -1017,17 +1000,23 @@ class CANALvod(object):
             'Connection': 'keep-alive',
             'Referer': 'https://www.canalplus.com/',}
         
+        
+        import time
         ts = int(time.time())*100
         a = str(ts)
         b = str(czas())
-
+        
+        
+        
         if not self.DEVID:
             self.DEVID = '%s-%s'%( b, self.gen_hex_code(12))
             set_setting('devid', self.DEVID)
         
+        
         zzzDEVID = '%s-%s'%( b, self.gen_hex_code(12))
 
         ptok = get_setting('PASStoken')#split('PL=')[-1]
+        
         data ={"ServiceRequest":{"InData":{"PassData":{"Id":0,"Token":ptok},"UserKeyId":self.DEVICE_ID,"DeviceKeyId":self.DEVID,"PDSData":{"GroupTypes":"1;4"}}}}
 
         data = json.dumps(data)
@@ -1035,13 +1024,13 @@ class CANALvod(object):
 
         urlk='https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/3/apps/1/jobs/InitLiveTV'
 
-        response = sess.post(urlk, headers=headers, data=data, verify=False ).json()
+        response = sess.post(urlk, headers=headers, data=data,verify=False ).json()
 
         outdata = response["ServiceResponse"]["OutData"]
         self.LIVEtoken = outdata["LiveToken"]
         set_setting('livetoken', self.LIVEtoken)
         grupy = outdata["PDS"]["ChannelsGroups"]["ChannelsGroup"]
-        out = []
+        out=[]
         for grupa in grupy:
             channels = grupa["Channels"]
             for channel in channels:
@@ -1057,8 +1046,8 @@ class CANALvod(object):
                 urlpage_ = channel["WSXUrl"]
                 urlpage_= urlpage_+'|'+ epgid_
                 out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": plot,'typ':'live'})
+        return out    
 
-        return out
         
     def RefreshLIVEtoken(self):
         self.RefreshPassToken()
@@ -1078,15 +1067,20 @@ class CANALvod(object):
             'Connection': 'keep-alive',
             'Referer': 'https://www.canalplus.com/',}
         
+        
+        import time
         ts = int(time.time())*100
         a = str(ts)
         b = str(czas())
-
+        
+        
+        
         if not self.DEVID:
             self.DEVID = '%s-%s'%( b, self.gen_hex_code(12))
             set_setting('devid', self.DEVID)
         
-        zzzDEVID = '%s-%s' % (b, self.gen_hex_code(12))
+        
+        zzzDEVID = '%s-%s'%( b, self.gen_hex_code(12))
 
         ptok = get_setting('PASStoken')#split('PL=')[-1]
         
@@ -1096,7 +1090,7 @@ class CANALvod(object):
 
         urlk='https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/3/apps/1/jobs/InitLiveTV'
 
-        response = sess.post(urlk, headers=headers, data=data, verify=False ).json()
+        response = sess.post(urlk, headers=headers, data=data,verify=False ).json()
 
         outdata = response["ServiceResponse"]["OutData"]
         self.LIVEtoken = outdata["LiveToken"]
@@ -1111,23 +1105,27 @@ class CANALvod(object):
         }
         
         data = {
-            'analytics': 'true',
-            'noCache': 'false',
-            'passId': self.PASSid,
-            'vect': 'Internet',
-            'media': 'Android Phone',
-            'trackingPub': 'true',
-            'portailId': self.portailId
-        }
+        'analytics': 'true',
+        'noCache': 'false',
 
+        'passId': self.PASSid,
+        'vect': 'Internet',
+        'media': 'Android Phone',
+        'trackingPub': 'true',
+        'portailId': self.portailId
+        }
         data = {
-            'noCache': 'false',
-            'passId': self.PASSid,
-            'deviceId':self.DEVID,
-            'vect': 'Internet',
-            'media': 'PC',
-            'portailId': 'vbdTj7eb6aM.',
-            'zone':'cppol'
+
+        'noCache': 'false',
+
+        'passId': self.PASSid,
+        'deviceId':self.DEVID,
+        
+        'vect': 'Internet',
+        'media': 'PC',
+
+        'portailId': 'vbdTj7eb6aM.',
+        'zone':'cppol'
         }
 
         headers = {
@@ -1139,10 +1137,11 @@ class CANALvod(object):
             'Connection': 'keep-alive',
         }
 
+
         response = sess.post(self.CREATE_TOKEN, headers=headers, data=data,verify=False ).json()
 
-        self.PASSid = response["response"]["passId"]
-        self.PASStoken = response["response"]["passToken"]
+        self.PASSid=response["response"]["passId"]
+        self.PASStoken=response["response"]["passToken"]
         a11=self.PASSid
         a22=self.PASStoken
         set_setting('PASSid', a11)
@@ -1168,24 +1167,18 @@ class CANALvod(object):
 
         
     def getContentDemand(self,url):
-<<<<<<< Updated upstream
 
         out =[]
         h1 = {'Host': 'hodor.canalplus.pro',
-=======
-        out = []
-        h1 = {
-            'Host': 'hodor.canalplus.pro',
->>>>>>> Stashed changes
             'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
             'accept': '*/*',
             'accept-language': 'pl,en-US;q=0.7,en;q=0.3',
-            'origin': 'https://www.canalplus.com',
-            'te': 'trailers'
-        }
 
+            'origin': 'https://www.canalplus.com',
+            'te': 'trailers',}
         response = getRequests(url.format(self.CMStoken), headers=h1)
         if 'strates' in response:
+        
             strates = response['strates']
             for strate in strates:
                 for content in strate["contents"]:
@@ -1195,49 +1188,48 @@ class CANALvod(object):
                     except:
                         tytul_  = content["altImage"]
                     contentID_ = content["contentID"]
-                    
-                    urllogo_ = content.get('URLImage', "")
-                    if urllogo_ == "":
-                        urllogo_ = content.get('URLLogoChannel', "")
-                        if urllogo_ == "": 
-                            urllogo_ = ""
+                    try:
+                        urllogo_ = content['URLImage']
+                    except:
+                        urllogo_ = content['URLLogoChannel']
                     
                     urllogo_ = urllogo_.replace('{imageQualityPercentage}','70')
                     urlpage_ = urlpage_+'|'+ contentID_
                     out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": '','typ':'cdn'})
-
         return out
-
     def getContent(self,url):
-        out = []
-        npout = []
-        typ2 = ''
+        out =[]
+        npout=[]
+        typ2=''
 
         if '|' in url:
             url,typ2 = url.split('|')
-        
         if '/query/' in url:
-            response = getRequests(url, headers=self.HODORheaders)        
+            response = getRequests(url, headers=self.HODORheaders)
+            
         else:
             response = getRequests(url.format(self.CMStoken), headers=self.HODORheaders)
 
         if 'strates' in response:
+
             strates = response['strates']
 
             try:
                 boa = response['currentPage']['BOName']
             except:
                 boa = ''
-
             for strate in strates:
-                if 'title' in strate or boa == 'Channels':
-                    if strate['strateMode'] =='standard': 
+
+                if 'title' in strate or boa=='Channels':
+                    
+                    if strate['strateMode'] =='standard':
+                        
                         if not typ2:
-                            if boa == 'Channels':
-                                tytul_ = '    Na zyczenie'
+
+                            if boa=='Channels':
+                                tytul_='    Na zyczenie'
                             else:
                                 tytul_ = strate['title']
-
                             if 'button' in strate:
                                 urlpage_ = strate['button']['onClick']['URLPage']
                                 typ = 'cdn'
@@ -1247,16 +1239,13 @@ class CANALvod(object):
                                 urlpage_ = url+'|'+ typ
 
                             out.append({"title": PLchar(tytul_), "url": urlpage_,'image':'', "code": '', "plot": '','typ':typ})
-                        
                         else:
-<<<<<<< Updated upstream
 
                             if strate['context']['contextDetail'] == typ2 or typ2=='cdn':
-=======
-                            if strate['context']['contextDetail'] == typ2 or typ2 == 'cdn':
->>>>>>> Stashed changes
                                 contents = strate['contents']
+
                                 for content in contents:
+
                                     try:
                                         tytul_ = content['title']    
                                     except:
@@ -1264,11 +1253,10 @@ class CANALvod(object):
 
                                     contentID = content['contentID']
 
-                                    urllogo_ = content.get('URLImage', "")
-                                    if urllogo_ == "":
-                                        urllogo_ = content.get('URLLogoChannel', "")
-                                        if urllogo_ == "": 
-                                            urllogo_ = ""
+                                    try:
+                                        urllogo_ = content['URLImage']
+                                    except:
+                                        urllogo_ = content['URLLogoChannel']
 
                                     urllogo_ = urllogo_.replace('{imageQualityPercentage}','70')
                                     urlpage_ = content['onClick']['URLPage']
@@ -1279,14 +1267,11 @@ class CANALvod(object):
 
                                     out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": '','typ':typ})
 
-<<<<<<< Updated upstream
                             elif strate['context']['contextType']=='edito': 
-=======
-                            elif strate['context']['contextType'] == 'edito': 
->>>>>>> Stashed changes
                                 if typ2=='70047' or typ2=='70067' or typ2=='24376' or typ2=='70025' or typ2== '70028' or typ2=='70027' or typ2=='70024' or typ2=='70023' or typ2=='70008' or typ2=='70001' or typ2=='70002' or typ2=='70003' or typ2=='70043' or typ2=='70042' or typ2=='70008' or typ2=='70009' or typ2=='70011' or typ2=='70007' or typ2=='70010' or typ2=='70016' or typ2=='70017' or typ2=='70026' or typ2=='70029' or typ2=='70030': #105007.json' in url or '104796.json' in url or '105158.json' in url or '105162.json':
                                     contents = strate['contents']
                                     for content in contents:
+
                                         try:
                                             tytul_ = content['title']    
                                         except:
@@ -1294,11 +1279,10 @@ class CANALvod(object):
                                     
                                         contentID = content['contentID']
 
-                                        urllogo_ = content.get('URLImage', "")
-                                        if urllogo_ == "":
-                                            urllogo_ = content.get('URLLogoChannel', "")
-                                            if urllogo_ == "": 
-                                                urllogo_ = ""
+                                        try:
+                                            urllogo_ = content['URLImage']
+                                        except:
+                                            urllogo_ = content['URLLogoChannel']
                                     
                                         urllogo_ = urllogo_.replace('{imageQualityPercentage}','70')
                                         urlpage_ = content['onClick']['URLPage']
@@ -1321,11 +1305,12 @@ class CANALvod(object):
                     tytul_ = content['title']    
                     contentID = content['contentID']
 
-                    urllogo_ = content.get('URLImage', "")
-                    if urllogo_ == "":
-                        urllogo_ = content.get('URLLogoChannel', "")
-                        if urllogo_ == "": 
-                            urllogo_ = ""
+                    if 'URLImage' in content:
+                        urllogo_ = content['URLImage']
+                    elif 'URLLogoChannel' in content:
+                        urllogo_ = content['URLLogoChannel']
+                    else:
+                        continue
 
                     urllogo_ = urllogo_.replace('{imageQualityPercentage}','70')
                     urlpage_ = content['onClick']['URLPage']
@@ -1334,7 +1319,7 @@ class CANALvod(object):
                     if 'subtitle' in content:
 
                         if 'Odcinek' in content['subtitle'] or 'Sezon' in content['subtitle']:
-                            tytul_+=' [COLOR lightgreen]%s[/COLOR]' % (content['subtitle'])
+                            tytul_+=' [COLOR lightgreen]%s[/COLOR]'%(content['subtitle'])
 
                     out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": '','typ':typ})
                 
@@ -1345,11 +1330,11 @@ class CANALvod(object):
                     seasons = detail['seasons']
 
                     for sezon in seasons:
+
                         try:
                             tytul_ = sezon['title']    
                         except:
-                            tytul_ = sezon['onClick']['displayName']   
-
+                            tytul_ = sezon['onClick']['displayName']    
                         contentID = sezon['contentID']
                         if 'URLImage' in information:
                             urllogo_ = information['URLImage']
@@ -1361,33 +1346,30 @@ class CANALvod(object):
                         try:
                             plot = information['summary']
                         except:
-                            plot = ''
+                            plot=''
 
                         urllogo_ = urllogo_.replace('{imageQualityPercentage}','70')
                         urlpage_ = sezon['onClick']['URLPage']
                         try:
                             typ = sezon['type']
                         except:
-                            typ = ''
+                            typ=''
                         urlpage_ = urlpage_+'|'+ contentID
 
                         out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": plot,'typ':typ})
-
             elif 'episodes' in response:
                 detail = response['detail']
                 information = detail['informations']
 
                 contents = response['episodes']['contents']
                 for content in contents:
+
                     tytul_ = content['title']    
                     contentID = content['contentID']
-
-                    urllogo_ = content.get('URLImage', "")
-                    if urllogo_ == "":
-                        urllogo_ = content.get('URLLogoChannel', "")
-                        if urllogo_ == "": 
-                            urllogo_ = ""
-
+                    try:
+                        urllogo_ = content['URLImage']
+                    except:
+                        urllogo_ = content['URLLogoChannel']
                     try:
                         plot = content['summary']
                     except:
@@ -1404,25 +1386,24 @@ class CANALvod(object):
                     except:
                         typ = 'VoD'
                     urlpage_ = urlpage_+'|'+ contentID
-                    tytul_ = '%s - [COLOR lightgreen]%s[/COLOR]' % (maintitle,tytul_)
+                    tytul_='%s - [COLOR lightgreen]%s[/COLOR]'%(maintitle,tytul_)
 
                     out.append({"title": PLchar(tytul_), "url": urlpage_,'image':urllogo_, "code": '', "plot": plot,'typ':typ})
                 if response['episodes']['paging']['hasNextPage']:
                     urlp2 = response['episodes']['paging']['URLPage']
                     npout.append({"title": 'Następna strona', "url": urlp2+'|'+typ2})
-
             if 'paging' in response and not npout:
                 if response['paging']['hasNextPage']:
                     urlp2 = response['paging']['URLPage']
                     npout.append({"title": 'Następna strona', "url": urlp2+'|'+typ2})
-
-        return out, npout   
-
+        return out,npout   
+  
 if __name__ == '__main__':
 
     mode = params.get('mode', None)
 
     if not mode:
+        
         home()
         xbmcplugin.endOfDirectory(addon_handle)     
 
@@ -1434,15 +1415,17 @@ if __name__ == '__main__':
             else:
                 pass
         else:
-            xbmcgui.Dialog().notification('[B]Uwaga[/B]', 'Nie jesteś zalogowany.', xbmcgui.NOTIFICATION_INFO, 6000, False)
+            xbmcgui.Dialog().notification('[B]Uwaga[/B]', 'Nie jesteś zalogowany.',xbmcgui.NOTIFICATION_INFO, 6000,False)
 
     elif mode=='login':
         set_setting('logged', 'true')
         addon.openSettings()
         xbmc.executebuiltin('Container.Refresh') 
+
         
     elif mode=='logout':
-        yes = xbmcgui.Dialog().yesno("[COLOR orange]Uwaga[/COLOR]", 'Czy na pewno chcesz się wylogować?', yeslabel='TAK', nolabel='NIE')
+
+        yes = xbmcgui.Dialog().yesno("[COLOR orange]Uwaga[/COLOR]", 'Czy na pewno chcesz się wylogować?',yeslabel='TAK', nolabel='NIE')
         if yes:
             set_setting('sesstoken', '')
             set_setting('sessexpir', '')
@@ -1463,14 +1446,20 @@ if __name__ == '__main__':
             xbmc.executebuiltin('Container.Refresh') 
     
     elif mode == 'listContent':
+
         ListContent(exlink)
      
     elif mode == 'listDemand':
+
         ListDemand(exlink)
         
     elif mode == 'listcateg':
+
         ListCateg(exlink)
- 
+        
+
+
+     
     elif mode == 'szukaj':
         if CANALvod().LOGGED == 'true':
             query = xbmcgui.Dialog().input(u'Szukaj, Podaj tytuł...', type=xbmcgui.INPUT_ALPHANUM)
@@ -1479,16 +1468,15 @@ if __name__ == '__main__':
                 urlquery = (CANALvod().searchURL).format(CANALvod().CMStoken,query)
                 ListContent( urlquery)
         else:
-            xbmcgui.Dialog().notification('[B]Uwaga[/B]', 'Nie jesteś zalogowany.',xbmcgui.NOTIFICATION_INFO, 6000, False)
-
+            xbmcgui.Dialog().notification('[B]Uwaga[/B]', 'Nie jesteś zalogowany.',xbmcgui.NOTIFICATION_INFO, 6000,False)
     elif mode == 'opcje':
         addon.openSettings()   
 
     elif mode == 'listkanaly':
         ListKanaly()
         
-    elif mode == 'kreatorm3u':
-        KreatorM3U()
+    elif mode == 'genlist':
+        GenList()
         
     elif mode =='playCANvod':
         PLAYvodCANAL(exlink)

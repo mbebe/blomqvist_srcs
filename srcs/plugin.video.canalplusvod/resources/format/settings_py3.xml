@@ -39,15 +39,7 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
-			</group>
-		</category>
-		<category help="" id="drm" label="30008">
-			<group id="1">
-				<setting help="" id="drmcert" label="30009" type="boolean">
-					<level>0</level>
-					<default>false</default>
-					<control type="toggle"/>
-				</setting>
+
 			</group>
 		</category>
 	</section>
