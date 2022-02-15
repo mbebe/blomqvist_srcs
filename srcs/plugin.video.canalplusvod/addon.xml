@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<<<<<<< Updated upstream
 <addon id="plugin.video.canalplusvod" version="1.7.5.1" name="CanalPLUS-VOD" provider-name="mbebe, mariusz89b">
+=======
+<addon id="plugin.video.canalplusvod" version="1.7.5.3" name="CanalPLUS-VOD" provider-name="mbebe, mariusz89b">
+>>>>>>> Stashed changes
 <requires>
 <!-- <import addon="xbmc.addon" version="17.9.910"/>-->
   <import addon="script.module.requests" />
