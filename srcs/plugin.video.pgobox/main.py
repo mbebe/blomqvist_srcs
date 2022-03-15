@@ -649,13 +649,16 @@ class IPLA(object):
         addon.setSetting('sesskey', self.SESSKEY)
         return self.SESSTOKEN+'|'+self.SESSEXPIR+'|{0}|{1}'
         
+    def local_time(ff):
+        from datetime import datetime, timedelta, timezone
+        return ff + datetime.now(timezone.utc).astimezone().utcoffset()
         
     def newtime(self,ff):
         from datetime import datetime
         ff=re.sub(':\d+Z','',ff)
         dd=re.findall('T(\d+)',ff)[0]
         dzien=re.findall('(\d+)T',ff)[0]
-        dd='{:>02d}'.format(int(dd)+2)
+        dd='{:>02d}'.format(int(dd))
         if dd=='24':
             dd='00'
             dzien='{:>02d}'.format(int(dzien)+1)
@@ -671,7 +674,7 @@ class IPLA(object):
             format_date=datetime(*(time.strptime(ff, '%Y-%m-%dT%H:%M')[0:6]))
         dd= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
 
-        return dd,format_date   
+        return dd,local_time(format_date)
     
     def getSzukaj(self,query):
         self.getSesja()

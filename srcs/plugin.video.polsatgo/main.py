@@ -714,8 +714,8 @@ def tvmain():
     return urls
 
 def local_time(ff):
-    from datetime import datetime, timedelta
-    return ff - timedelta(hours=1)
+    from datetime import datetime, timedelta, timezone
+    return ff + datetime.now(timezone.utc).astimezone().utcoffset()
 
 def newtime(ff):
     from datetime import datetime
@@ -724,7 +724,7 @@ def newtime(ff):
     ff=re.sub(':\d+Z','',ff)
     dd=re.findall('T(\d+)',ff)[0]
     dzien=re.findall('(\d+)T',ff)[0]
-    dd='{:>02d}'.format(int(dd)+2)
+    dd='{:>02d}'.format(int(dd))
     if dd=='24':
         dd='00'
         dzien='{:>02d}'.format(int(dzien)+1)
