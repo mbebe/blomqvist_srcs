@@ -7,7 +7,10 @@
     </category>	
     <category label="30006" >
         <setting id="auto-view" type="bool" label="30003" default="false" enable=/>
-    </category>  
+    </category> 
+    <category label="30008" >
+        <setting id="drmcert" type="bool" label="30009" default="false" enable=/>
+    </category> 	
 </settings>
 
 
