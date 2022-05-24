@@ -4,7 +4,7 @@
 		<setting type="lsep" label="Logowanie" />
 		<setting id="usernameCP"  type="text" label="Login" default="" />
 		<setting id="passwordCP"  type="text" label="Hasło" option="hidden"  />
-		<setting id="logowanie4" type="bool" label="Logowanie w serwisie" default="false" enable=/>
+		<setting id="logowanie4" type="bool" label="Logowanie w serwisie" default="false" />
 	</category>	
 
 </settings>

@@ -162,6 +162,7 @@ def home():
     add_item('', '[B][COLOR khaki]Szukaj[/COLOR][/B]', ikona, "szukaj", folder=True,fanart=FANART)
     add_item('', 'Opcje', ikona, "opcje", folder=False,fanart=FANART)
     if IPLA().LOGGED == 'true':
+        #add_item('', 'Wygeneruj playliste M3U', ikona, "build_m3u", folder=True,fanart=FANART)
         add_item('', '[B][COLOR blue]Wyloguj[/COLOR][/B]', ikona, "logout", folder=False,fanart=FANART)
         
 def HBOsubmenu():
@@ -171,6 +172,7 @@ def HBOsubmenu():
     add_item('genres|Dla Dzieci|Kids filmy', 'KIDS filmy', ikona, "packcontent", folder=True,fanart=FANART)
     add_item('key_categories|5001096|Kids seriale', 'KIDS seriale', ikona, "packcontent", folder=True,fanart=FANART)
     add_item('media_type|tv|Kanały TV', 'Kanały TV', ikona, "packcontent", folder=True,fanart=FANART)
+
     xbmcplugin.endOfDirectory(addon_handle) 
     
 def HBOmenu():
@@ -307,7 +309,11 @@ def ListTVS():
         
        # for item in items:
             add_item(item['url'], item['title'], item['img'], 'playtvs', folder=False, IsPlayable=True, infoLabels={'plot':opis},fanart=FANART)
-        xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
+
+        if addon.getSetting('sort') == 'true':
+            xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_LABEL)
+        else:
+            xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask = "%R, %Y, %P")
         setView('tvshows')
     #   xbmcplugin.setContent(addon_handle, 'videos')   
         xbmcplugin.endOfDirectory(addon_handle) 
@@ -338,11 +344,14 @@ def xbmc_sleep(time):
     return xbmc.sleep(time)
 
 def getRequests(url, data={}, headers={}, params ={}):
-    if data:
-        content=sess.post(url,headers=headers,json=data, params=params, verify=False).json()
-    else:
-        content=sess.get(url,headers=headers, params=params, verify=False).json()
-    return content
+    try:
+        if data:
+            content=sess.post(url,headers=headers,json=data, params=params, verify=False).json()
+        else:
+            content=sess.get(url,headers=headers, params=params, verify=False).json()
+        return content
+    except:
+        xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Połączenie do serwisu nie powiodło się',xbmcgui.NOTIFICATION_INFO, 6000,False)
 
 def PLchar(char):
     if type(char) is not str:
@@ -412,6 +421,8 @@ class IPLA(object):
 
         self.DANE = self.SESSTOKEN+'|'+self.SESSEXPIR+'|{0}|{1}'
 
+        self.DATA = None
+
         self.settingsFix()
 
     def settingsFix(self):
@@ -450,6 +461,10 @@ class IPLA(object):
         if self.DEVICE_ID == '' or self.CLIENT_ID == '' or self.ID_ == '':
             self.createDatas()
 
+        print('LOGGED')
+        print(self.LOGGED)
+
+
         if self.LOGGED == 'true':
             
             if self.LOGIN and self.PASSWORD:
@@ -468,6 +483,7 @@ class IPLA(object):
 
 
                 data = getRequests(self.AUTH, data = POST_DATA, headers=self.HEADERS)
+                self.DATA = data
 
                 try:
                     if data['error']['data']["type"] == "RulesException":
@@ -493,19 +509,29 @@ class IPLA(object):
 
                 else:
                     myper=[]
+
+                    m_pack = {'multiple_packet_tv' : 'sc:tv', 'multiple_packet_premium': 'sc:premium', 'multiple_packet_sport': 'sc:sport', 'pos:multiple_packet_dzieci' : 'sc:kat_odzieci', 'news:true': 'sc:news'}
+
                     for i in data["result"]["accessGroups"]:
-                        if ':true' in i:
-                            myper.append(str(i))
+                        for k,v in m_pack.items():
+                            if k in i:
+                                myper.append(str(v))
                         if 'sc:' in i:
                             myper.append(str(i))
                         if 'oth:' in i:
                             myper.append(str(i))
-                        if 'loc:' in i:
+                        if 'cpuser:true' in i:
+                            myper.append(str(i))
+                        if 'vip:true' in i:
+                            myper.append(str(i))
+                        if 'rodo:true' in i:
+                            myper.append(str(i))
+                        if 'plususer:true' in i:
                             myper.append(str(i))
                         if 'cp_sub_ext:' in i:
                             myper.append(str(i.replace('cp_sub_ext','sc')))
                         if 'cp_sub_base:' in i:
-                            myper.append(str(i.replace('cp_sub_base','sc')))                        
+                            myper.append(str(i.replace('cp_sub_base','sc'))) 
 
                     addon.setSetting('myperm', str(myper))
 
@@ -612,6 +638,7 @@ class IPLA(object):
 
         
     def sesja(self,data):
+
         sesja=data['result']['session']
         self.SESSTOKEN=sesja['id']
         self.SESSEXPIR=str(sesja['keyExpirationTime'])
@@ -622,13 +649,16 @@ class IPLA(object):
         addon.setSetting('sesskey', self.SESSKEY)
         return self.SESSTOKEN+'|'+self.SESSEXPIR+'|{0}|{1}'
         
+    def local_time(ff):
+        from datetime import datetime, timedelta, timezone
+        return ff + datetime.now(timezone.utc).astimezone().utcoffset()
         
     def newtime(self,ff):
         from datetime import datetime
         ff=re.sub(':\d+Z','',ff)
         dd=re.findall('T(\d+)',ff)[0]
         dzien=re.findall('(\d+)T',ff)[0]
-        dd='{:>02d}'.format(int(dd)+2)
+        dd='{:>02d}'.format(int(dd))
         if dd=='24':
             dd='00'
             dzien='{:>02d}'.format(int(dzien)+1)
@@ -644,7 +674,7 @@ class IPLA(object):
             format_date=datetime(*(time.strptime(ff, '%Y-%m-%dT%H:%M')[0:6]))
         dd= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
 
-        return dd,format_date   
+        return dd,local_time(format_date)
     
     def getSzukaj(self,query):
         self.getSesja()
@@ -904,53 +934,49 @@ class IPLA(object):
 
     def getChannels(self):
         self.getSesja()
+ 
         items = []
 
         dane = (self.DANE).format('navigation','getTvChannels')
         
         authdata=self.getHmac(dane)
-
-      #  POST_DATA = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
-#
-     #   POST_DATA = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"filters":[],"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
-    
         
-        
-        
-       # POST_DATA = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"offset":0,"limit":40,"filters":[],"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
         POST_DATA = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"filters":[],"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
         
-        
-        data = getRequests(self.NAVIGATE, data = POST_DATA, headers=self.HEADERS)
+        data = getRequests(self.NAVIGATE, data = POST_DATA, headers=self.HEADERS)      
 
         myper=[]
         for i in eval(self.MYPERMS):
             if 'sc:' in i:
-
                 myper.append(str(i))
             if 'oth:' in i:
                 myper.append(str(i))
-            if 'loc:' in i:
+            if 'cpuser:true' in i:
+                myper.append(str(i))
+            if 'vip:true' in i:
+                myper.append(str(i))
+            if 'rodo:true' in i:
+                myper.append(str(i))
+            if 'plususer:true' in i:
                 myper.append(str(i))
             if 'cp_:' in i:
                 myper.append(str(i))
-            
                 
-        
         for i in data['result']['results']:
             item = {}
             channelperms = i['grantExpression'].split('*')
             channelperms = [w.replace('+plat:all', '') for w in channelperms]
+
             for j in myper:
                 if j in channelperms or i['title']=='Polsat' or i['title']=='TV4':
-                    item['img'] = i['thumbnails'][-1]['src'].encode('utf-8')
+                    item['img'] = i['thumbnails'][-1]['src'].encode('utf-8').decode('utf-8')
                     item['id'] = i['id']
-                    item['title'] = i['title'].upper().encode('utf-8')
-                    item['plot'] = i['description'].encode('utf-8')
+                    item['title'] = i['title'].upper().encode('utf-8').decode('utf-8')
+                    item['plot'] = i['description'].encode('utf-8').decode('utf-8')
                     item['plot'] = item['plot'] if item['plot']  else item['title']
                     item = {'title':item['title'],'url':item['id'],'img':item['img'],'plot':item['plot']}
                     items.append(item)
-        
+
         dupes = []
         filter = []
         for entry in items:
@@ -961,16 +987,31 @@ class IPLA(object):
         
         items = filter
         return items
-    def getSesja(self):
+
+    def getSesja(self, retry=False):
+
         dane = (self.DANE).format('auth','getSession') #'|auth|getSession'
-        authdata=self.getHmac(dane)
+        authdata = self.getHmac(dane)
 
         POST_DATA ={"id":1,"jsonrpc":"2.0","method":"getSession","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
 
-        data = getRequests(self.AUTH, data = POST_DATA, headers=self.HEADERS)
+        data = getRequests(self.AUTH, data=POST_DATA, headers=self.HEADERS)
 
-        self.DANE=self.sesja(data)
+        if not retry:
+            error = data.get('error', None)
+
+            if error:
+                if IPLA().LOGGED == 'true':
+                    IPLA().logowanie()
+                    IPLA().getSesja(True)
+
+        if retry:
+            data = self.DATA
+
+        self.DANE = self.sesja(data)
+
         return
+
     def checkAccess(self,id_):
         acc=False
         dane = self.DANE.format('drm','checkProductAccess')
@@ -1056,7 +1097,39 @@ class IPLA(object):
         dupek.append(items)
         
         return dupek
-        
+
+    def decode_byte(self, b):
+        try:
+            b = b.decode('utf-8')
+        except:
+            b
+
+        return b
+  
+    def generate_m3u(self):
+        path = xbmcgui.Dialog().browse(0, 'Wybierz miejsce zapisu playlisty', 'files')
+        if path == '':
+            return
+
+        filename = xbmcgui.Dialog().input('Ustaw nazwę pliku', type=xbmcgui.INPUT_ALPHANUM)
+        if filename == '':
+            return
+
+        xbmcgui.Dialog().notification('Polsat GO BOX', 'Generuje liste M3U', xbmcgui.NOTIFICATION_INFO)
+        data = '#EXTM3U'
+        for item in IPLA().getChannels():
+            
+            channelid = item.get('url', None)
+            list_title = self.decode_byte(item.get('title', '')) + ' PL'
+            title = self.decode_byte(item.get('title', ''))
+            img = self.decode_byte(item.get('img', ''))
+
+            data += '\n#EXTINF:-1,{}\nplugin://plugin.video.pgobox/?mode=playtvs&url={}&page=0&moviescount=0&movie=True&name={}&image={}'.format(list_title, channelid, title, img)
+
+        f = xbmcvfs.File(path+filename+'.m3u', 'w')
+        f.write(data)
+        f.close()
+        xbmcgui.Dialog().notification('Polsat GO BOX', 'Wygenerowano liste M3U', xbmcgui.NOTIFICATION_INFO)      
         
     def PlayIpla(self,id_,cpid=0):
 
@@ -1168,7 +1241,10 @@ if __name__ == '__main__':
         
         home()
         #xbmcplugin.setContent(addon_handle, 'videos')  
-        xbmcplugin.endOfDirectory(addon_handle)     
+        xbmcplugin.endOfDirectory(addon_handle)  
+
+    elif mode == 'build_m3u':
+        IPLA().generate_m3u()   
 
     elif mode=='search':
         if IPLA().LOGGED == 'true':
@@ -1320,4 +1396,4 @@ if __name__ == '__main__':
     elif mode == 'packcontent':
         ListPacketContent(exlink,page)
     elif mode == 'opcje':
-        addon.openSettings()   
+        addon.openSettings()

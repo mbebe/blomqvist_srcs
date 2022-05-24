@@ -362,7 +362,7 @@ def deunicode_params(params):
 
 def _getRequests(url, data=None, headers=None, params=None):
     xbmc.log('PLAYER.PL: getRequests(%r, data=%r, headers=%r, params=%r)'
-             % (url, data, headers, params), xbmc.LOGINFO)
+             % (url, data, headers, params), xbmc.LOGDEBUG)
     params = deunicode_params(params)
     if data:
         if headers.get('Content-Type', '').startswith('application/json'):
@@ -377,7 +377,7 @@ def _getRequests(url, data=None, headers=None, params=None):
 def _getRequests3(url, data=None, headers=None, params=None):
     # urllib3 seems to be faster in some cases
     xbmc.log('PLAYER.PL: getRequests3(%r, data=%r, headers=%r, params=%r)'
-             % (url, data, headers, params), xbmc.LOGINFO)
+             % (url, data, headers, params), xbmc.LOGDEBUG)
     if params:
         params = deunicode_params(params)
         encoded_args = urlencode(params)
@@ -570,7 +570,7 @@ class CountSubfolders(object):
                 th.join()
             xbmc.log('PLAYER.PL: count folder joined', xbmc.LOGDEBUG)
             self._count = {sid: convert(thread.result) for sid, thread in threads.items()}
-            xbmc.log('PLAYER.PL: count folder catch data: %r' % self._count, xbmc.LOGINFO)
+            xbmc.log('PLAYER.PL: count folder catch data: %r' % self._count, xbmc.LOGDEBUG)
         return self._count
 
     def title(self, item, title, info=None):
@@ -893,7 +893,7 @@ class PLAYERPL(object):
             PARAMS = {'type': rodzaj, 'platform': UA, 'videoSessionId': vidsesid}
             data = getRequests(urlk, headers=HEADERSz, PARAMS=PARAMS)
 
-        xbmc.log('PLAYER.PL: getPlaylist(%r): data: %r' % (id_, data), xbmc.LOGINFO)
+        xbmc.log('PLAYER.PL: getPlaylist(%r): data: %r' % (id_, data), xbmc.LOGDEBUG)
         code = data.get('code')
         try:
             vid = data['movie']
@@ -1119,7 +1119,7 @@ class PLAYERPL(object):
         because folder is not playable.
         """
         if vid in self._precessed_vid_list:
-            xbmc.log(u'PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGINFO)
+            xbmc.log(u'PLAYER.PL: item %s (%r) already processed' % (vid, meta.tytul), xbmc.LOGDEBUG)
             if self.remove_duplicates:
                 return
         if meta is None and vod is not None:
@@ -1258,7 +1258,7 @@ class PLAYERPL(object):
         urlk = 'https://player.pl/playerapi/product/live/search'
         lives = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
         xbmc.log('PLAYER.PL: listSearch(%r): params=%r, #live=%r' % (query, PARAMS, len(lives.get('items', []))),
-                 xbmc.LOGINFO)
+                 xbmc.LOGDEBUG)
         lives = lives['items']
         # -- commented out, it does do nothing   (rysson)
         # if len(lives)>0:
@@ -1267,7 +1267,7 @@ class PLAYERPL(object):
         urlk = 'https://player.pl/playerapi/product/vod/search'
         data = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
         xbmc.log('PLAYER.PL: listSearch(%r): params=%r, #vod=%r' % (query, PARAMS, len(data.get('items', []))),
-                 xbmc.LOGINFO)
+                 xbmc.LOGDEBUG)
         self.process_vod_list(data['items'])
         # setView('tvshows')
         xbmcplugin.setContent(addon_handle, 'videos')

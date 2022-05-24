@@ -70,13 +70,11 @@ stoken = addon.getSetting('sesstoken')
 sexpir = addon.getSetting('sessexpir')
 skey = addon.getSetting('sesskey')
 
-
 sortowaniev = addon.getSetting('sortowanieV')
 if not sortowaniev:
     addon.setSetting('sortowanieV','"12"')
 sortowanien = addon.getSetting('sortowanieN') if '12' not in sortowaniev else 'Ostatnio dodane'
 sortowanien = 'Ostatnio dodane' if '12' in sortowaniev else 'Alfabetycznie'
-
 
 def build_url(query):
     return base_url + '?' + urlencode(query)
@@ -102,6 +100,7 @@ def add_item(url, name, image, folder, mode,  isPlayable=True, infoLabels=False,
 
     FANART = FANART if FANART else image
     list_item.setArt({'thumb': image, 'poster': image, 'banner': image, 'fanart': FANART})
+
     xbmcplugin.addDirectoryItem(
         handle=addon_handle,
         url = build_url({'title':name,'mode': mode, 'url' : url, 'page' : page,'plot':infoLabels,'image':image}),
@@ -254,6 +253,7 @@ def playCPGO(id,cpid=0):
 
 
     response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
+
     sesja=response['result']['session']
 
     sesstoken=sesja['id']
@@ -408,6 +408,7 @@ def loginCPgo():
 
 
             response = requests.post(auth_url, headers=headers, json=data,timeout=15, verify=False).json()
+
             try:
                 blad=response['error']
                 if blad:
@@ -426,13 +427,6 @@ def loginCPgo():
                 addon.setSetting('sesstoken', sesstoken)
                 addon.setSetting('sessexpir', str(sessexpir))
                 addon.setSetting('sesskey', sesskey)
-
-
-
-
-
-
-
 
                 dane =sesstoken+'|'+sessexpir+'|auth|getSession'
                 authdata=getHmac(dane)
@@ -552,6 +546,7 @@ def home():
         add_item(name='Telewizja', url='', mode='tvcpgo', image=ikona, folder=True, isPlayable=False,FANART=FANART)
         add_item(name='VOD', url='', mode='vodmain', image=ikona, folder=True, isPlayable=False,FANART=FANART)
         add_item(name='Moja lista', url='', mode='mojalista', image=ikona, folder=True, isPlayable=False,FANART=FANART)
+        add_item(name='Wygeneruj playliste M3U', url='', mode='build_m3u', image=ikona, folder=True, isPlayable=False,FANART=FANART)
     else:
         add_item('', '[B]Zaloguj[/B]','DefaultAddonService.png',False,'settings',False,FANART=FANART)
     xbmcplugin.endOfDirectory(addon_handle)
@@ -673,8 +668,8 @@ def tvmain():
 
     data = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"filters":[],"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid}}
 
-
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
+
     aa=response['result']['results']
     for i in aa:
         item = {}
@@ -691,8 +686,10 @@ def tvmain():
                 item['title'] = i['title'].upper().encode('utf-8')
                 item['plot'] = i['category']['description'].encode('utf-8')
                 items.append(item)
+
     dupes = []
     filter = []
+    urls = []
     for entry in items:
 
         if not entry['id'] in dupes:
@@ -710,13 +707,15 @@ def tvmain():
         except:
             opis=''
         add_item(name=item.get('title'), url=item.get('id'), mode='playCPGO', image=item.get('img'), folder=False, isPlayable=True, infoLabels={'title':item.get('title'),'plot':opis}, itemcount=itemz,FANART=FANART)
-
+        urls.append(build_url({'title':item.get('title'),'mode': 'playCPGO', 'url' : item.get('id'), 'page' : 0,'plot':{'title':item.get('title'),'plot':opis},'image':item.get('img')}))
 
     xbmcplugin.endOfDirectory(addon_handle)
 
+    return urls
+
 def local_time(ff):
-    from datetime import datetime, timedelta
-    return ff - timedelta(hours=1)
+    from datetime import datetime, timedelta, timezone
+    return ff + datetime.now(timezone.utc).astimezone().utcoffset()
 
 def newtime(ff):
     from datetime import datetime
@@ -725,7 +724,7 @@ def newtime(ff):
     ff=re.sub(':\d+Z','',ff)
     dd=re.findall('T(\d+)',ff)[0]
     dzien=re.findall('(\d+)T',ff)[0]
-    dd='{:>02d}'.format(int(dd)+2)
+    dd='{:>02d}'.format(int(dd))
     if dd=='24':
         dd='00'
         dzien='{:>02d}'.format(int(dzien)+1)
@@ -823,12 +822,8 @@ def getEpgs():
 
     return dupek
 
-
-
 def vodmain():
     add_item(name='Szukaj', url='', mode='vodszukaj', image=RESOURCES+'search.png', folder=True, isPlayable=False,FANART=FANART)
-
-
     add_item(name='SERIALE', url='5024024', mode='vodlist', image='https://redirector.redefine.pl/iplatv/menu_icon_seriale.png', folder=True, isPlayable=False,FANART=FANART)
     add_item(name='SPORT', url='5024074', mode='vodlist', image='https://redirector.redefine.pl/iplatv/menu_icon_sport.png', folder=True, isPlayable=False,FANART=FANART)
     add_item(name='FILM', url='5024058', mode='vodlist', image='https://ipla-e3-18.pluscdn.pl/p/iplatv/gf/gfarpsbbncitbcsxze1artm3uf3i3jh8/film.png', folder=True, isPlayable=False,FANART=FANART)
@@ -1052,7 +1047,6 @@ def MojaLista():
 
 
 def vodList(id):
-
 #5024024 seriale
 #5024074 sport
 #5024058 filmy
@@ -1069,7 +1063,6 @@ def vodList(id):
     id__ = id.split('|')[0]
     if id__ == "s":
         id = id.split('|')[1]
-
 
     headers = {
         'Host': host,
@@ -1117,13 +1110,11 @@ def vodList(id):
             idc = id
         data = {"id":1,"jsonrpc":"2.0","method":"getCategoryContentWithFlatNavigation","params":{"catid":idc,"offset":int(offse),"limit":50,"filters":[],"collection":{"type":"sortedby","name":eval(sortowaniev),"default":True,"value":eval(sortowaniev)},"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":""}}
 
-
     response = requests.post(navigate_url, headers=headers, json=data,timeout=15, verify=False).json()
 
     mud='playVOD'
     folder=False
     isplay=True
-
 
     try:
 
@@ -1249,7 +1240,6 @@ def getHmac(dane):
 
 
 def Usun(id):
-
     kateg,id = id.split('_')
     typ = {"type":kateg,"value":id}
 
@@ -1269,17 +1259,7 @@ def Usun(id):
     dane =stoken+'|'+sexpir+'|user_content|deleteFromFavorites'
     authdata=getHmac(dane)
 
-
-
-
     data = {"id":1,"jsonrpc":"2.0","method":"deleteFromFavorites","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid,"favorite":typ}}
-
-
-
-
-
-
-
 
     response = requests.post(user_url, headers=headers, json=data,timeout=15, verify=False).json()
     xbmcgui.Dialog().notification('[B]Info[/B]', 'Usunięto z MOJEJ LISTY' ,xbmcgui.NOTIFICATION_INFO, 6000)
@@ -1309,17 +1289,7 @@ def dodajusun(id):
     dane =stoken+'|'+sexpir+'|user_content|addToFavorites'
     authdata=getHmac(dane)
 
-
-
-
     data = {"id":1,"jsonrpc":"2.0","method":"addToFavorites","params":{"ua":uapg,"deviceId":{"type":"other","value":devid},"userAgentData":{"portal":"pg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":osinfo},"authData":{"sessionToken":authdata},"clientId":clid,"favorite":typ}}
-
-
-
-
-
-
-
 
     response = requests.post(user_url, headers=headers, json=data,timeout=15, verify=False).json()
     dane =stoken+'|'+sexpir+'|navigation|getFavoritesWithFlatNavigation'
@@ -1335,10 +1305,26 @@ def dodajusun(id):
         else:
             continue
     xbmcgui.Dialog().notification('[B]Info[/B]', komunikat,xbmcgui.NOTIFICATION_INFO, 6000)
-
-
     return
 
+def generate_m3u(exlink):
+    path = xbmcgui.Dialog().browse(0, 'Wybierz miejsce zapisu playlisty', 'files')
+    if path == '':
+        return
+
+    xbmcgui.Dialog().notification('Polsat GO', 'Generuje liste M3U', xbmcgui.NOTIFICATION_INFO)
+    data = '#EXTM3U'
+
+    urls = tvmain()
+    for url in urls:   
+        title = re.findall('title=(.+?)&mode', url)[0] + ' PL'
+        data += '\n#EXTINF:-1,{title}\n{url}'.format(title=title, url=url)
+
+    f = xbmcvfs.File(path+'polsatgo_iptv.m3u', 'w')
+    f.write(data)
+    f.close()
+    xbmcgui.Dialog().notification('Polsat GO', 'Wygenerowano liste M3U', xbmcgui.NOTIFICATION_INFO)      
+    return
 
 def PLchar(char):
     if type(char) is not str:
@@ -1372,6 +1358,8 @@ def router(paramstring):
 
         if mode == 'playCPGO':
             playCPGO(exlink)
+        elif mode == 'build_m3u':
+            generate_m3u(exlink)
         elif mode == 'live':
             live()
         elif mode == 'tvcpgo':

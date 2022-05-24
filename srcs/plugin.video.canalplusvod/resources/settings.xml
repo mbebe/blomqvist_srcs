@@ -4,9 +4,13 @@
         <setting id="username"  type="text" label="30000" default="" />
         <setting id="password"  type="text" label="30001" option="hidden"  default="" />
         <setting id="logowanie" type="bool" label="30002" default="false" enable=/>
-
     </category>	
     <category label="30006" >
         <setting id="auto-view" type="bool" label="30003" default="false" enable=/>
-    </category>  
+    </category> 
+    <category label="30008" >
+        <setting id="drmcert" type="bool" label="30009" default="false" enable=/>
+    </category> 	
 </settings>
+
+
