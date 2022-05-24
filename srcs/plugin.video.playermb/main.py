@@ -923,7 +923,9 @@ class PLAYERPL(object):
                 widev += '&videoSessionId=%s' % vidsesid
         else:
             src = vid['video']['sources']['hls']['url']
-            widev = None
+            # start = vid.get('time_shift', {}).get('start')
+            src += '&dvr=86400000'  # one day, @m1992 found hte limit: 262139999
+            widev = 'hls'
         return src, widev, outsub
 
     def refreshTokenTVN(self):
@@ -974,7 +976,21 @@ class PLAYERPL(object):
             else:
                 subt = u[0]
 
-        if license_url:
+        if license_url == 'hls':
+            from inputstreamhelper import Helper
+            stream_proto = license_url
+            is_helper = Helper(stream_proto)
+            if is_helper.check_inputstream():
+                play_item = xbmcgui.ListItem(path=stream_url)
+                # if stream.mime is not None:
+                #     play_item.setMimeType(stream.mime)
+                play_item.setContentLookup(False)
+                play_item.setProperty('inputstream', is_helper.inputstream_addon)
+                play_item.setProperty("IsPlayable", "true")
+                play_item.setProperty('inputstream.adaptive.manifest_type', stream_proto)
+            else:
+                play_item = xbmcgui.ListItem(path=stream_url)
+        elif license_url:
             # DRM
             import inputstreamhelper
 
