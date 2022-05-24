@@ -1005,7 +1005,7 @@ class PLAYERPL(object):
 
             is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
             if not is_helper.check_inputstream():
-                raise ValueError('To i tak się by wcześniej wywaliło !!!')
+                xbmc.log('PLAYER.PL: InputStream filed for %r' % license_url, xbmc.LOGWARNING)
             play_item = xbmcgui.ListItem(path=str_url)
             play_item.setContentLookup(False)
             download_subtitles()
