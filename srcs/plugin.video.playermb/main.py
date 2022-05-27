@@ -88,6 +88,9 @@ ExLink.new = classmethod(lambda cls, exlink: cls(*exlink.split(':')[:5]))
 ExLink.beginTimestamp = property(lambda self: self.a1)
 ExLink.endTimestamp = property(lambda self: self.a2)
 
+ImageRule = namedtuple('ImageRule', 'width height quality')
+ImageRule.ratio = property(lambda self: self.width / self.height)
+
 
 class NotPlayable(Exception):
     """Item is not playable."""
@@ -272,6 +275,7 @@ def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=
     art.setdefault('poster', image)
     art.setdefault('banner', art.get('landscape', image))
     art.setdefault('fanart', FANART)
+    art.setdefault('landscape', image)
     art = {k: 'https:' + v if v and v.startswith('//') else v for k, v in art.items()}
     list_item.setArt(art)
     if properties:
@@ -644,10 +648,14 @@ class PLAYERPL(object):
         self.fix_api = get_bool('fix_api')
         self.remove_duplicates = get_bool('remove_duplicates')
         self.partial_size = int(addon.getSetting('partial_size') or 1000)
-        # self.force_media_fanart = get_bool('self.force_media_fanart')
-        self.force_media_fanart = True
-        self.force_media_fanart_width = 1280
-        self.force_media_fanart_quality = 85
+        # self.force_media_resize = get_bool('self.force_media_fanart')
+        self.force_media_resize = True
+        self.force_media_rules = {
+            'smart_tv:mainUrl': ImageRule(1280, 720, 85),
+            'pc:mainUrl':       ImageRule(1280, 720, 85),
+            'vertical:mainUrl': ImageRule(864, 1154, 85),
+        }
+        self.force_media_quality = 85
         self.logo_tags = {  # extra tag like "E1" in Eurosport taken from "pc" logo id
             2824: 'E',
             2831: 'E1',
@@ -712,27 +720,52 @@ class PLAYERPL(object):
         images = {}
         # See: https://kodi.wiki/view/Artwork_types
         # New art images must be added to MetaDane
-        for prop, (iname, uname) in {'foto': ('smart_tv', 'mainUrl'),
-                                     'fanart': ('smart_tv', 'mainUrl'),
-                                     'thumb': ('smart_tv', 'miniUrl'),
-                                     'poster': ('vertical', 'mainUrl'),
-                                     'landscape': ('smart_tv', 'mainUrl')}.items():
-            try:
-                images[prop] = data['images'][iname][0][uname]
-            except (KeyError, IndexError) as exc:
-                xbmc.log('PLAYER.PL: no image %s.%s %r in %r' % (
-                    iname, uname, exc, data.get('images')), xbmc.LOGDEBUG)
+        for prop, inames in {'foto':      [('smart_tv', 'mainUrl'), ('pc', 'mainUrl')],
+                             'fanart':    [('smart_tv', 'mainUrl'), ('pc', 'mainUrl')],
+                             'thumb':     [('smart_tv', 'miniUrl'), ('mobile', 'miniUrl'),
+                                           ('pc', 'miniUrl'), ('pc', 'mainUrl')],
+                             'poster':    [('vertical', 'mainUrl'), ('pc', 'mainUrl')],
+                             'landscape': [('smart_tv', 'mainUrl'), ('pc', 'mainUrl')],
+                             }.items():
+            for iname, uname in inames:
+                try:
+                    images[prop] = data['images'][iname][0][uname]
+                except (KeyError, IndexError):
+                    pass
+                else:
+                    if self.force_media_resize:
+                        iurl, _, iparams = images[prop].partition('?')
+                        iparams = dict(parse_qsl(iparams))
+                        if iparams.get('dstw', '').isdigit() and iparams.get('dstw', '').isdigit():
+                            rule = self.force_media_rules.get('%s:%s' % (iname, uname))
+                            if not rule and 'srcw' in iparams and 'srch' in iparams:
+                                rule = ImageRule(int(iparams['srcw']), int(iparams['srch']),
+                                                 self.force_media_quality)
+                            if rule:
+                                w, h = int(iparams['dstw']), int(iparams['dsth'])
+                                dst_ratio = w / h if h else 1.
+                                rule_ration = rule.width / rule.height if rule.height else 1.
+                                if w != rule.width:
+                                    iparams['dstw'] = rule.width
+                                    if -.1 < dst_ratio - rule_ration < .1:
+                                        # very close to preffered ratio, use rule.height directly
+                                        iparams['dsth'] = rule.height
+                                    else:
+                                        # far away from preffered ratio, count new height
+                                        iparams['dsth'] = h * rule.width // (w or 1)
+                                iparams['quality'] = rule.quality
+                                images[prop] = '%s?%s' % (iurl, urlencode(iparams))
+                        elif iparams.get('w', '').isdigit() and 'i.eurosport.com' in iurl:
+                            rule = self.force_media_rules.get('%s:%s' % (iname, uname))
+                            if rule:
+                                w = int(iparams['w'])
+                                if w < rule.width:
+                                    iparams['w'] = (rule.width + 9) // 10 * 10  # MUST be / 10  (nnn0)
+                                    images[prop] = '%s?%s' % (iurl, urlencode(iparams))
+                    break
+            else:
+                xbmc.log('PLAYER.PL: no image %s (%s) in %r' % (prop, inames, data.get('images')), xbmc.LOGINFO)
                 images[prop] = None
-        if self.force_media_fanart and images['fanart']:
-            iurl, _, iparams = images['fanart'].partition('?')
-            iparams = dict(parse_qsl(iparams))
-            if iparams.get('dstw', '').isdigit() and iparams.get('dstw', '').isdigit():
-                w, h = int(iparams['dstw']), int(iparams['dsth'])
-                if w != self.force_media_fanart_width:
-                    iparams['dstw'] = self.force_media_fanart_width
-                    iparams['dsth'] = h * self.force_media_fanart_width // (w or 1)
-                iparams['quality'] = self.force_media_fanart_quality
-            images['fanart'] = '%s?%s' % (iurl, urlencode(iparams))
         try:
             logo = self.logo_tags[data['logo']['images']['pc'][0]['id']]
         except (KeyError, IndexError):
@@ -1358,7 +1391,7 @@ class PLAYERPL(object):
             for f in items:
                 add_item(name=f.get('title'), url=f.get('url'), mode='listEpizody', image=f.get('img'),
                          folder=True, infoLabels=f)
-        setView('episodes')
+        setView('seasons')
         # xbmcplugin.setContent(addon_handle, 'episodes')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle)
@@ -1470,7 +1503,7 @@ class PLAYERPL(object):
         category_tree = self.category_tree
         catimages = {}
         for item in category_tree:
-            image = (item.get('images', {}).get('smart_tv') or [{}])[0].get('mainUrl')
+            image = (item.get('images', {}).get('pc') or [{}])[0].get('mainUrl')
             if image:
                 catimages[item['slug']] = image
         for item in category_tree:
@@ -1521,7 +1554,7 @@ class PLAYERPL(object):
                 # image = media('genre/%s.png' % item['id'], fallback=ADDON_ICON)
                 add_item(url, name, image=None, mode='listcategContent', folder=True, isPlayable=False,
                          properties=item.get('_props_'))  # , fallback_image=None)
-        setView('tvshows')
+        setView('genres')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE,
                                  label2Mask="%R, %Y, %P")
         xbmcplugin.endOfDirectory(addon_handle, succeeded=True, cacheToDisc=False)
@@ -1550,7 +1583,7 @@ class PLAYERPL(object):
             gid = item['id']
             slug = item['slug']
             try:
-                foto = item['images']['smart_tv'][0]['mainUrl']
+                foto = item['images']['pc'][0]['mainUrl']
                 foto = 'https:' + foto if foto.startswith('//') else foto
             except Exception:
                 foto = ADDON_ICON
