@@ -648,6 +648,11 @@ class PLAYERPL(object):
         self.force_media_fanart = True
         self.force_media_fanart_width = 1280
         self.force_media_fanart_quality = 85
+        self.logo_tags = {  # extra tag like "E1" in Eurosport taken from "pc" logo id
+            2824: 'E',
+            2831: 'E1',
+            2838: 'E2',
+        }
         self._precessed_vid_list = set()
         self.dywiz = '–'
         self.hard_separator = ' '
@@ -695,7 +700,7 @@ class PLAYERPL(object):
 
     def get_meta_data(self, data):
         if not data.get('active', True):
-            return '', '', '', None, None
+            return MetaDane('', '', '', None, None)
         tytul = data['title']
         if data.get('uhd'):
             tytul = '%s [4K]' % (tytul or '')
@@ -728,6 +733,13 @@ class PLAYERPL(object):
                     iparams['dsth'] = h * self.force_media_fanart_width // (w or 1)
                 iparams['quality'] = self.force_media_fanart_quality
             images['fanart'] = '%s?%s' % (iurl, urlencode(iparams))
+        try:
+            logo = self.logo_tags[data['logo']['images']['pc'][0]['id']]
+        except (KeyError, IndexError):
+            pass
+        else:
+            tytul = '%s | %s' % (tytul, logo)
+            opis = '[B]%s[/B] | %s' % (logo, opis or '')
         sezon = bool(data.get('showSeasonNumber')) or data.get('type') == 'SERIAL'
         epizod = bool(data.get("showEpisodeNumber"))
         allowed = self.is_allowed(data)
