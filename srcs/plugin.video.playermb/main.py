@@ -738,7 +738,7 @@ class PLAYERPL(object):
                         iparams = dict(parse_qsl(iparams))
                         if iparams.get('dstw', '').isdigit() and iparams.get('dstw', '').isdigit():
                             rule = self.force_media_rules.get('%s:%s' % (iname, uname))
-                            if not rule and 'srcw' in iparams and 'srch' in iparams:
+                            if not rule and iparams.get('srcw', '').isdigit() and iparams.get('srcw', '').isdigit():
                                 rule = ImageRule(int(iparams['srcw']), int(iparams['srch']),
                                                  self.force_media_quality)
                             if rule:
@@ -754,7 +754,9 @@ class PLAYERPL(object):
                                         # far away from preffered ratio, count new height
                                         iparams['dsth'] = h * rule.width // (w or 1)
                                 iparams['quality'] = rule.quality
-                                images[prop] = '%s?%s' % (iurl, urlencode(iparams))
+                            else:
+                                iparams['quality'] = self.force_media_quality
+                            images[prop] = '%s?%s' % (iurl, urlencode(iparams))
                         elif iparams.get('w', '').isdigit() and 'i.eurosport.com' in iurl:
                             rule = self.force_media_rules.get('%s:%s' % (iname, uname))
                             if rule:
