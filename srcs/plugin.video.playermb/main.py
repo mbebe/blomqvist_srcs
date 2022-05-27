@@ -291,7 +291,7 @@ def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=
     ok = xbmcplugin.addDirectoryItem(
         handle=addon_handle,
         url=build_url({'mode': mode, 'url': url, 'page': linkdata['page'], 'moviescount': moviescount,
-                       'movie': movie, 'name': linkdata['name'], 'image': linkdata['image']}),
+                       'movie': movie, 'name': linkdata['name']}),
         listitem=list_item,
         isFolder=folder)
     return ok
