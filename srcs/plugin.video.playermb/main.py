@@ -130,10 +130,6 @@ sys.path.append(os.path.join(RESOURCES, 'lib'))
 HISTORY_SIZE = 50
 
 addon_data = AddonUserData(os.path.join(DATAPATH, 'data.json'))
-exlink = params.get('url')
-# name = params.get('name')
-# page = params.get('page', '')
-# rys = params.get('image')
 kukz = ''
 
 slug_blacklist = {
@@ -251,7 +247,7 @@ def build_url(query):
 
 
 def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=None, movie=True,
-             itemcount=1, page=1, fanart=None, moviescount=0, properties=None, thumb=None,
+             itemcount=1, page=None, fanart=None, moviescount=0, properties=None, thumb=None,
              contextmenu=None, art=None, linkdata=None, fallback_image=ADDON_ICON,
              label2=None):
     list_item = xbmcgui.ListItem(label=name)
@@ -284,14 +280,14 @@ def add_item(url, name, image, mode, folder=False, isPlayable=False, infoLabels=
         list_item.addContextMenuItems(contextmenu, replaceItems=False)
     # link data used to build link,to support old one
     linkdata = {} if linkdata is None else dict(linkdata)
-    linkdata.setdefault('name', name)
-    linkdata.setdefault('image', image)
-    linkdata.setdefault('page', page)
+    if page is not None:
+        linkdata['page'] = page
+    linkdata['mode'] = mode
+    linkdata['url'] = url
     # add item
     ok = xbmcplugin.addDirectoryItem(
         handle=addon_handle,
-        url=build_url({'mode': mode, 'url': url, 'page': linkdata['page'], 'moviescount': moviescount,
-                       'movie': movie, 'name': linkdata['name']}),
+        url=build_url(linkdata),
         listitem=list_item,
         isFolder=folder)
     return ok
@@ -1713,7 +1709,8 @@ def addon_settings(name=None, **kwargs):
 
 if __name__ == '__main__':
 
-    mode = params.get('mode', None)
+    exlink = params.get('url')
+    mode = params.get('mode')
     name = params.get('name')
     xbmc.log('PLAYER.PL: ENTER: mode=%r, name=%r, exlink=%r' % (mode, name, exlink),
              xbmc.LOGWARNING)
