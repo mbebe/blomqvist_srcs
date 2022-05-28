@@ -1347,15 +1347,13 @@ class PLAYERPL(object):
             sez = (vod["season"]["number"])
             tyt = PLchar((vod["season"]["serial"]["title"]))
             if 'fakty-' in vod.get('shareUrl', ''):
-                name = PLchar(tyt, '-', vod['title'])
                 tytul = PLchar(tyt, self.dywiz, vod['title'])
             else:
-                name = '%s - S%02dE%02d' % (tyt, sez, epiz)
                 tytul = '%s %s S%02dE%02d' % (tyt, PLchar(self.dywiz), sez, epiz)
             if vod.get('title'):
                 tytul += PLchar('', self.dywiz, vod['title'].strip())
             meta = meta._replace(tytul=tytul)
-            self.add_media_item('playvid', vid, meta, folder=False, vod=vod, linkdata={'name': name})
+            self.add_media_item('playvid', vid, meta, folder=False, vod=vod)
         setView('episodes')
         # xbmcplugin.setContent(addon_handle, 'episodes')
         xbmcplugin.addSortMethod(addon_handle, sortMethod=xbmcplugin.SORT_METHOD_TITLE, label2Mask="%R, %Y, %P")
