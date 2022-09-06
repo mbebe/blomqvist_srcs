@@ -532,8 +532,8 @@ class IPLA(object):
                             myper.append(str(i.replace('cp_sub_ext','sc')))
                         if 'cp_sub_base:' in i:
                             myper.append(str(i.replace('cp_sub_base','sc'))) 
+							
 
-                    addon.setSetting('myperm', str(myper))
 
                     sesja=data['result']['session']
             
@@ -546,7 +546,8 @@ class IPLA(object):
                     addon.setSetting('sesskey', self.SESSKEY)
                     
                     set_setting('logged', self.LOGGED)
-                    
+
+                    addon.setSetting('myperm', str(myper))
                     return True
 
         if self.LOGGED != 'true':
@@ -649,16 +650,13 @@ class IPLA(object):
         addon.setSetting('sesskey', self.SESSKEY)
         return self.SESSTOKEN+'|'+self.SESSEXPIR+'|{0}|{1}'
         
-    def local_time(ff):
-        from datetime import datetime, timedelta, timezone
-        return ff + datetime.now(timezone.utc).astimezone().utcoffset()
         
     def newtime(self,ff):
         from datetime import datetime
         ff=re.sub(':\d+Z','',ff)
         dd=re.findall('T(\d+)',ff)[0]
         dzien=re.findall('(\d+)T',ff)[0]
-        dd='{:>02d}'.format(int(dd))
+        dd='{:>02d}'.format(int(dd)+2)
         if dd=='24':
             dd='00'
             dzien='{:>02d}'.format(int(dzien)+1)
@@ -674,7 +672,7 @@ class IPLA(object):
             format_date=datetime(*(time.strptime(ff, '%Y-%m-%dT%H:%M')[0:6]))
         dd= int('{:0}'.format(int(time.mktime(format_date.timetuple()))))
 
-        return dd,local_time(format_date)
+        return dd,format_date   
     
     def getSzukaj(self,query):
         self.getSesja()
@@ -727,6 +725,7 @@ class IPLA(object):
 
         POST_DATA = {"id":1,"jsonrpc":"2.0","method":"checkProductsAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"products":idsy_,"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
         data = getRequests('https://b2c-www.redefine.pl/rpc/drm/', data = POST_DATA, headers=self.HEADERS)
+
         return data
 
         
@@ -758,6 +757,7 @@ class IPLA(object):
             item1 = {'id': i['product']['id'],"type":i['product']['type'],"subType":i['product']['subType']}
             items.append(item)
             items1.append(item1)
+
         data = self.checkAccessList(items1)
         items3=[]
         for d in data['result']:
@@ -767,7 +767,6 @@ class IPLA(object):
                         if d["product"]["id"]==i['id']:
                             if d['access']["statusDescription"]!='has access':
                                 i['title']+=' [COLOR red](brak w twoim pakiecie)[/COLOR]'
-                             #   i['title']=i['title'].encode('ascii', 'ignore')
 
                             items3.append(i)   
                     except:
@@ -961,14 +960,32 @@ class IPLA(object):
                 myper.append(str(i))
             if 'cp_:' in i:
                 myper.append(str(i))
-                
+              
+		
+        dane = (self.DANE).format('navigation','getCommonlyAccessiblePackets')
+        authdata=self.getHmac(dane)
+        POST_DATAx= {"id":1,"jsonrpc":"2.0","method":"getCommonlyAccessiblePackets","params":{"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
+
+        datax = getRequests(self.NAVIGATE, data = POST_DATAx, headers=self.HEADERS)
+
+        results = datax.get("result", None)
+        for rr in results:
+            abcd = rr.get("id", None)
+            if abcd:
+                myper.append('sc:'+	str(abcd))
+
+        addon.setSetting('myperm', str(myper))
+			  
         for i in data['result']['results']:
             item = {}
             channelperms = i['grantExpression'].split('*')
             channelperms = [w.replace('+plat:all', '') for w in channelperms]
-
+            channelperms = [w.replace('+dev:pc', '') for w in channelperms]
+            channelperms = [w.replace('+dev:mobile', '') for w in channelperms]
+            channelperms = [w.replace('+dev:pc', '') for w in channelperms]
             for j in myper:
-                if j in channelperms or i['title']=='Polsat' or i['title']=='TV4':
+				
+                if j in channelperms or i['title']=='Polsat' or i['title']=='TV4' or i['title']=='Ukraina 24 HD':
                     item['img'] = i['thumbnails'][-1]['src'].encode('utf-8').decode('utf-8')
                     item['id'] = i['id']
                     item['title'] = i['title'].upper().encode('utf-8').decode('utf-8')
@@ -990,7 +1007,7 @@ class IPLA(object):
 
     def getSesja(self, retry=False):
 
-        dane = (self.DANE).format('auth','getSession') #'|auth|getSession'
+        dane = (self.DANE).format('auth','getSession') 
         authdata = self.getHmac(dane)
 
         POST_DATA ={"id":1,"jsonrpc":"2.0","method":"getSession","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
@@ -1019,16 +1036,27 @@ class IPLA(object):
         POST_DATA = {"id":1,"jsonrpc":"2.0","method":"checkProductAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"product":{"id":id_,"type":"media","subType":"movie"},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
 
         if 'HBOacc' in id_:
+            POST_DATA = {"id":1,"jsonrpc":"2.0","method":"checkProductAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"product":{"id":"hbo","type":"multiple","subType":"packet"},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}  
+            POST_DATA2 = {"id":1,"jsonrpc":"2.0","method":"checkProductAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"product":{"id":"kat_hbohd","type":"multiple","subType":"packet"},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}   
+            data = getRequests('https://b2c-www.redefine.pl/rpc/drm/', data = POST_DATA, headers=self.HEADERS)
+            data2 = getRequests('https://b2c-www.redefine.pl/rpc/drm/', data = POST_DATA2, headers=self.HEADERS)
+            if data['result']["statusDescription"] =="has access":
+                acc = True
+            elif data2['result']["statusDescription"] =="has access":
+                acc = True
+            else:
+                acc = False
 
-            POST_DATA = {"id":1,"jsonrpc":"2.0","method":"checkProductAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"product":{"id":"hbo","type":"multiple","subType":"packet"},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}   
         elif 'HBOtv' in id_:
-                id_=id_.split('|')[0]
-                POST_DATA = {"id":1,"jsonrpc":"2.0","method":"checkProductAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"product":{"id":id_,"type":"media","subType":"tv"},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}    
+            id_=id_.split('|')[0]
+            POST_DATA = {"id":1,"jsonrpc":"2.0","method":"checkProductAccess","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"product":{"id":id_,"type":"media","subType":"tv"},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}    
+            data = getRequests('https://b2c-www.redefine.pl/rpc/drm/', data = POST_DATA, headers=self.HEADERS)
+            acc = True if data['result']["statusDescription"] =="has access" else False
+        else:
+            data = getRequests('https://b2c-www.redefine.pl/rpc/drm/', data = POST_DATA, headers=self.HEADERS)
 
-        data = getRequests('https://b2c-www.redefine.pl/rpc/drm/', data = POST_DATA, headers=self.HEADERS)
+            acc = True if data['result']["statusDescription"] =="has access" else False
         
-        acc = True if data['result']["statusDescription"] =="has access" else False
-
         return acc
         
     def getEpgs(self):
@@ -1163,6 +1191,7 @@ class IPLA(object):
             keyid = mediaSources['keyId']
             sourceid = mediaSources['id']
             cc= mediaSources.get('authorizationServices',None).get('pseudo',None)
+
             if not cc:
 
                 UAcp=  'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0'
@@ -1217,6 +1246,8 @@ class IPLA(object):
                     play_item.setProperty('inputstream.adaptive.license_flags', "persistent_storage")
             else:
                 dane = self.DANE.format('drm','getPseudoLicense')
+				
+				
                 authdata=self.getHmac(dane)
                 devcid=(self.DEVICE_ID).replace('-','')
 
@@ -1226,6 +1257,22 @@ class IPLA(object):
 
                 str_url=data['result']['url']
                 play_item = xbmcgui.ListItem(path=str_url)#
+                if '.mpd' in str_url:
+				
+                    import inputstreamhelper
+                    PROTOCOL = 'mpd'
+                    DRM = 'com.widevine.alpha'
+                    is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
+                    if is_helper.check_inputstream():
+                        play_item.setMimeType('application/xml+dash')
+                        play_item.setContentLookup(False)
+                        if sys.version_info[0] > 2:
+                            play_item.setProperty('inputstream', is_helper.inputstream_addon)
+                        else:
+                            play_item.setProperty('inputstreamaddon', is_helper.inputstream_addon)
+                        play_item.setProperty("IsPlayable", "true")
+                        
+                        play_item.setProperty('inputstream.adaptive.manifest_type', 'mpd')
 
             xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
 
