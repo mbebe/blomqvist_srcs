@@ -571,7 +571,7 @@ class IPLA(object):
             if addon.getSetting('device_id'):
                 device_id = addon.getSetting('device_id')
             else:
-                device_id = getSystemId(10)
+                device_id = getSystemId(8)
             set_setting('device_id', device_id)
             return device_id
             
@@ -848,14 +848,14 @@ class IPLA(object):
             if filmkatv:
 
                 kateg = eval(json.dumps(eval(filmkatv[:-1])))
-                
-                POST_DATA={"id":1,"jsonrpc":"2.0","method":"getCategoryContentWithFlatNavigation","params":{"catid":int(catid),"offset":page,"limit":40,"filters":[{"type":"genres","value":kateg}],"collection":{"type":"sortedby","name":eval(sortowaniev),"default":True,"value":eval(sortowaniev)},"ua":"pbg_pc_windows_firefox_html/1 (Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0)","deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"clientId":self.CLIENT_ID}}
+                POST_DATA={"id":1,"jsonrpc":"2.0","method":"getCategoryContentWithFlatNavigation","params":{"catid":int(catid),"offset":page,"limit":self.ILOSC,"filters":[{"type":"genres","value":kateg}],"collection":{"type":"sortedby","name":eval(sortowaniev),"default":True,"value":eval(sortowaniev)},"ua":"pbg_pc_windows_firefox_html/1 (Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0)","deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
 
         elif rodzaj == 'serial':
             if serialkatv:
 
                 kateg = eval(json.dumps(eval(serialkatv[:-1])))
                 POST_DATA={"id":1,"jsonrpc":"2.0","method":"getCategoryContentWithFlatNavigation","params":{"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","os":"windows","build":1,"osInfo":OSINFO},"ua":UAIPLA,"catid":int(catid),"offset":page,"filters":[{"type":"genres","value":kateg}],"collection":{"type":"sortedby","name":eval(sortowaniev),"default":True,"value":eval(sortowaniev)},"limit":self.ILOSC,"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
+
         elif rodzaj == 'programy':
             if programykatv:
 
@@ -892,9 +892,9 @@ class IPLA(object):
 
         dane = data['result']['results']
         npage = data['result']["total"]
+
         if page+self.ILOSC<npage:
             npout.append({'title':'[B][COLOR green] >>> Następna strona >>> [/B][/COLOR]','url':categid,'image':RESOURCES+'nextpage.png','plot':'','page':page+self.ILOSC})
-
         for f in dane:
 
             imag = f.get('posters','')#
@@ -933,7 +933,7 @@ class IPLA(object):
 
     def getChannels(self):
         self.getSesja()
- 
+	
         items = []
 
         dane = (self.DANE).format('navigation','getTvChannels')
@@ -942,7 +942,7 @@ class IPLA(object):
         
         POST_DATA = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"filters":[],"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
         
-        data = getRequests(self.NAVIGATE, data = POST_DATA, headers=self.HEADERS)      
+        data = getRequests(self.NAVIGATE, data = POST_DATA, headers=self.HEADERS)   
 
         myper=[]
         for i in eval(self.MYPERMS):
@@ -975,17 +975,20 @@ class IPLA(object):
                 myper.append('sc:'+	str(abcd))
 
         addon.setSetting('myperm', str(myper))
-			  
+
         for i in data['result']['results']:
             item = {}
             channelperms = i['grantExpression'].split('*')
-            channelperms = [w.replace('+plat:all', '') for w in channelperms]
-            channelperms = [w.replace('+dev:pc', '') for w in channelperms]
-            channelperms = [w.replace('+dev:mobile', '') for w in channelperms]
-            channelperms = [w.replace('+dev:pc', '') for w in channelperms]
+            if len(channelperms)==1 and channelperms[0]=='':
+                channelperms = []
+            else:
+                channelperms = [w.replace('+plat:all', '') for w in channelperms]
+                channelperms = [w.replace('+dev:pc', '') for w in channelperms]
+                channelperms = [w.replace('+dev:mobile', '') for w in channelperms]
+                channelperms = [w.replace('+dev:pc', '') for w in channelperms]
             for j in myper:
 				
-                if j in channelperms or i['title']=='Polsat' or i['title']=='TV4' or i['title']=='Ukraina 24 HD':
+                if j in channelperms or i['title']=='Polsat' or i['title']=='TV4' or i['title']=='Ukraina 24 HD' or not channelperms:
                     item['img'] = i['thumbnails'][-1]['src'].encode('utf-8').decode('utf-8')
                     item['id'] = i['id']
                     item['title'] = i['title'].upper().encode('utf-8').decode('utf-8')

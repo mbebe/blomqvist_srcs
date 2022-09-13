@@ -64,8 +64,6 @@
 						<options>
 							<option labelenum="65">65</option>
 							<option labelenum="150">150</option>
-							<option labelenum="250">250</option>
-							<option labelenum="500">500</option>
 						</options>
 					</constraints>
 					<control format="string" type="spinner"/>
