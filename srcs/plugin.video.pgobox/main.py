@@ -933,80 +933,39 @@ class IPLA(object):
 
     def getChannels(self):
         self.getSesja()
-	
-        items = []
-
         dane = (self.DANE).format('navigation','getTvChannels')
-        
         authdata=self.getHmac(dane)
-        
         POST_DATA = {"id":1,"jsonrpc":"2.0","method":"getTvChannels","params":{"filters":[],"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
-        
-        data = getRequests(self.NAVIGATE, data = POST_DATA, headers=self.HEADERS)   
+        data = getRequests(self.NAVIGATE, data = POST_DATA, headers=self.HEADERS)
+        items=[]
+        items1=[]
+        zz=data['result']['results']
+        for i in zz:
+            item={}
+            item1={}
+            item['img'] = i['thumbnails'][-1]['src'].encode('utf-8').decode('utf-8')
+            item['id'] = i['id']
+            item['url'] = i['id']
+            item['title'] = i['title'].upper().encode('utf-8').decode('utf-8')
+            item['plot'] = i['description'].encode('utf-8').decode('utf-8')
+            item['plot'] = item['plot'] if item['plot']  else item['title']
+            items.append(item)
+            item1 = {'id': i['product']['id'],"type":i['product']['type'],"subType":i['product']['subType']}
+            items1.append(item1)
 
-        myper=[]
-        for i in eval(self.MYPERMS):
-            if 'sc:' in i:
-                myper.append(str(i))
-            if 'oth:' in i:
-                myper.append(str(i))
-            if 'cpuser:true' in i:
-                myper.append(str(i))
-            if 'vip:true' in i:
-                myper.append(str(i))
-            if 'rodo:true' in i:
-                myper.append(str(i))
-            if 'plususer:true' in i:
-                myper.append(str(i))
-            if 'cp_:' in i:
-                myper.append(str(i))
-              
-		
-        dane = (self.DANE).format('navigation','getCommonlyAccessiblePackets')
-        authdata=self.getHmac(dane)
-        POST_DATAx= {"id":1,"jsonrpc":"2.0","method":"getCommonlyAccessiblePackets","params":{"ua":UAIPLA,"deviceId":{"type":"other","value":self.DEVICE_ID},"userAgentData":{"portal":"pbg","deviceType":"pc","application":"firefox","player":"html","build":1,"os":"windows","osInfo":OSINFO},"authData":{"sessionToken":authdata},"clientId":self.CLIENT_ID}}
+        data = self.checkAccessList(items1)
+        items3=[]
+        for d in data['result']:
+                for i in items:
 
-        datax = getRequests(self.NAVIGATE, data = POST_DATAx, headers=self.HEADERS)
+                    try:
+                        if d["product"]["id"]==i['id']:
+                            if d['access']["statusDescription"]=='has access':
+                                items3.append(i)
+                    except:
+                        pass
 
-        results = datax.get("result", None)
-        for rr in results:
-            abcd = rr.get("id", None)
-            if abcd:
-                myper.append('sc:'+	str(abcd))
-
-        addon.setSetting('myperm', str(myper))
-
-        for i in data['result']['results']:
-            item = {}
-            channelperms = i['grantExpression'].split('*')
-            if len(channelperms)==1 and channelperms[0]=='':
-                channelperms = []
-            else:
-                channelperms = [w.replace('+plat:all', '') for w in channelperms]
-                channelperms = [w.replace('+dev:pc', '') for w in channelperms]
-                channelperms = [w.replace('+dev:mobile', '') for w in channelperms]
-                channelperms = [w.replace('+dev:pc', '') for w in channelperms]
-            for j in myper:
-				
-                if j in channelperms or i['title']=='Polsat' or i['title']=='TV4' or i['title']=='Ukraina 24 HD' or not channelperms:
-                    item['img'] = i['thumbnails'][-1]['src'].encode('utf-8').decode('utf-8')
-                    item['id'] = i['id']
-                    item['title'] = i['title'].upper().encode('utf-8').decode('utf-8')
-                    item['plot'] = i['description'].encode('utf-8').decode('utf-8')
-                    item['plot'] = item['plot'] if item['plot']  else item['title']
-                    item = {'title':item['title'],'url':item['id'],'img':item['img'],'plot':item['plot']}
-                    items.append(item)
-
-        dupes = []
-        filter = []
-        for entry in items:
-            if not entry['url'] in dupes:
-                filter.append(entry)
-                dupes.append(entry['url'])
-        addon.setSetting('kanaly', str(dupes))
-        
-        items = filter
-        return items
+        return items3
 
     def getSesja(self, retry=False):
 
