@@ -837,7 +837,7 @@ class CANALvod(object):
 					
 					resp_device_id = sess.get(URL_DEVICE_ID, headers=header_device_id,verify=False )
 		
-					self.DEVICE_ID = re.compile(r'deviceId\"\:\"(.*?)\"').findall(resp_device_id.text)[0]
+					self.DEVICE_ID = re.compile('').findall(resp_device_id.text)[0]
 
 					set_setting('device_id', self.DEVICE_ID)
 					
