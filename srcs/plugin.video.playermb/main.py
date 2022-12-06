@@ -1318,7 +1318,7 @@ class PLAYERPL(object):
         lives = getRequests(urlk, headers=self.HEADERS2, params=PARAMS)
         xbmc.log('PLAYER.PL: listSearch(%r): params=%r, #live=%r' % (query, PARAMS, len(lives.get('items', []))),
                  xbmc.LOGDEBUG)
-        lives = lives['items']
+        lives = lives.get('items', lives)
         # -- commented out, it does do nothing   (rysson)
         # if len(lives)>0:
         #     for live in lives:
