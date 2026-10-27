@@ -21,7 +21,7 @@ import urllib3
 import base64
 
 requests.packages.urllib3.disable_warnings()
-requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':HIGH:!DH:!aNULL'
+#requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':HIGH:!DH:!aNULL'
 try:
 	requests.packages.urllib3.contrib.pyopenssl.util.ssl_.DEFAULT_CIPHERS += ':HIGH:!DH:!aNULL'
 except AttributeError:
@@ -231,6 +231,7 @@ def getMaxBand():
 def PLAYvodCANAL(urlid):
 	CANALvod().RefreshLIVEtoken()
 	url,id_ = urlid.split('|')
+	url = url.replace('{RMUToken}', addon.getSetting('rmutoken'))
 	
 	headers2 = {
 
@@ -265,10 +266,9 @@ def PLAYvodCANAL(urlid):
 	stream_url = re.sub('(\?token.+?)$','/manifest',stream_url)
 	#xbmc.log('@#@requests: %s' % str(url), LOGNOTICE)
 	
-	data = quote('{"ServiceRequest":{"InData":{"EpgId":'+id_+',"Mode":"MKPL","LiveToken":"'+ CANALvod().LIVEtoken+'","UserKeyId":"'+CANALvod().DEVICE_ID+'","DeviceKeyId":"'+CANALvod().DEVID+'","ChallengeInfo":"b{SSM}"}}}')
+	data = quote('{"ServiceRequest":{"InData":{"EpgId":'+id_+',"Mode":"MKPL","LiveToken":"'+ CANALvod().LIVEtoken+'","UserKeyId":"'+CANALvod().DEVICE_ID+'","DeviceKeyId":"'+CANALvod().DEVID+'","ChallengeInfo":"b{SSM}","PersistentLicense":"false"}}}')
 	
 	headers3 = {
-		'Host': 'secure-webtv.canal-plus.com',
 		'Accept': 'application/json, text/plain, */*',
 		'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
 		'Content-Type': 'application/json;charset=UTF-8',
@@ -288,7 +288,7 @@ def PLAYvodCANAL(urlid):
 	offer_zone = 0
 	drm_id = 0
 
-	abtv = "https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/31/apps/1/jobs/GetLicence"
+	abtv = "https://ltv.services.canalplustech.pro/api/V4/zones/cppol/devices/31/apps/1/providers/Widevine/jobs/GetLicence"
 	set_setting('heatv', str(headers3))
 	set_setting('lictvurl', str(abtv))
 
@@ -314,6 +314,9 @@ def PLAYvodCANAL(urlid):
 		play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
 		play_item.setProperty('inputstream.adaptive.license_type', DRM)
 		play_item.setProperty('inputstream.adaptive.license_key',LICKEY) 
+		# Widevine L3 dostaje klucze tylko do nizszych rozdzielczosci (1080p = kNoKey)
+		play_item.setProperty('inputstream.adaptive.chooser_resolution_max', addon.getSetting('maxres') or '640p')
+		play_item.setProperty('inputstream.adaptive.chooser_resolution_secure_max', addon.getSetting('maxres') or '640p')
 		if get_setting('drmcert') == 'true':
 			play_item.setProperty('inputstream.adaptive.server_certificate',certificate_data)
 
@@ -370,17 +373,19 @@ def PLAYvod2(urlid):
 	idKey_value = ''
 	quality_value = ''
 
-	for stream_datas in value_datas_jsonparser["available"]:
-		if 'DRM_COMMON_ENCRYPTION' in stream_datas["drmType"]:
-			comMode_value = stream_datas['comMode']
-			contentId_value = stream_datas['contentId']
-			distMode_value = stream_datas['distMode']
-			distTechnology_value = stream_datas['distTechnology']
-			drmType_value = stream_datas['drmType']
-			functionalType_value = stream_datas['functionalType']
-			hash_value = stream_datas['hash']
-			idKey_value = stream_datas['idKey']
-			quality_value = stream_datas['quality']
+	# preferuj DASH + Widevine (jak odtwarzacz www), stary Smooth Streaming jako zapas
+	available = value_datas_jsonparser["available"]
+	wybrane = [x for x in available if x["drmType"] == 'DRM_MKPC_WIDEVINE_DASH'] or [x for x in available if x["drmType"] == 'DRM_COMMON_ENCRYPTION']
+	for stream_datas in wybrane[:1]:
+		comMode_value = stream_datas['comMode']
+		contentId_value = stream_datas['contentId']
+		distMode_value = stream_datas['distMode']
+		distTechnology_value = stream_datas['distTechnology']
+		drmType_value = stream_datas['drmType']
+		functionalType_value = stream_datas['functionalType']
+		hash_value = stream_datas['hash']
+		idKey_value = stream_datas['idKey']
+		quality_value = stream_datas['quality']
 	
 	payload = {
 		'comMode': comMode_value,
@@ -395,17 +400,24 @@ def PLAYvod2(urlid):
 		'contentType':distMode_value
 	}
 
-	resp_stream_datas = sess.put(URL_STREAM_DATAS, json=payload, headers=headers, verify=False)
+	resp_stream_datas = sess.put(URL_STREAM_DATAS, json=payload, headers=headers, params={'include': 'medias'}, verify=False)
 	jsonparser_stream_datas = json.loads(resp_stream_datas.text)
-	resp_real_stream_datas = sess.get(HAPI_BASE_URL + jsonparser_stream_datas['@medias'], headers=headers, verify=False)
-	jsonparser_real_stream_datas = json.loads(resp_real_stream_datas.text)
+	medias = jsonparser_stream_datas.get('medias')
+	if not medias:
+		resp_real_stream_datas = sess.get(HAPI_BASE_URL + jsonparser_stream_datas['@medias'], headers=headers, verify=False)
+		medias = json.loads(resp_real_stream_datas.text)
 
-	stream_urls = jsonparser_real_stream_datas[0]['files']
-	for st_url in stream_urls:
+	stream_url = ''
+	licence_path = jsonparser_stream_datas['@licence'] + '?drmType=DRM_WIDEVINE'
+	PROTOCOL = 'ism'
+	for st_url in medias[0]['files']:
+		if st_url.get("mimeType") == 'application/dash+xml' or '.mpd' in st_url["distribURL"]:
+			stream_url = st_url["distribURL"]
+			PROTOCOL = 'mpd'
+			licence_path = medias[0].get('@licence', jsonparser_stream_datas['@licence']) + '&drmConfig=' + quote('mkpl::true|persistent::false')
+			break
 		if '.ism' in st_url["distribURL"]:
 			stream_url = st_url["distribURL"] + '/manifest'
-		else:
-			continue
 
 	headers2 = {
 		'Accept': quote('application/json, text/plain, */*'),
@@ -420,13 +432,12 @@ def PLAYvod2(urlid):
 		'XX-SERVICE': 'mycanal',
 	}
 
-	PROTOCOL = 'ism'
 	DRM = 'com.widevine.alpha'
 
 	is_helper = inputstreamhelper.Helper(PROTOCOL, drm=DRM)
 
 	PROXY_PATH = 'http://127.0.0.1:%s/license=' % (proxyport)
-	ab = HAPI_BASE_URL+jsonparser_stream_datas['@licence']+ '?drmType=DRM_WIDEVINE' 
+	ab = HAPI_BASE_URL + licence_path
 
 	set_setting('hea', str(headers2))
 	set_setting('licurl', str(ab))
@@ -445,6 +456,8 @@ def PLAYvod2(urlid):
 		play_item.setProperty('inputstream.adaptive.manifest_type', PROTOCOL)
 		play_item.setProperty('inputstream.adaptive.license_type', DRM)
 		play_item.setProperty('inputstream.adaptive.license_key',url + '|%s|b{SSM}|B' % urlencode(headers2) )
+		play_item.setProperty('inputstream.adaptive.chooser_resolution_max', addon.getSetting('maxres') or '640p')
+		play_item.setProperty('inputstream.adaptive.chooser_resolution_secure_max', addon.getSetting('maxres') or '640p')
 
 	xbmcplugin.setResolvedUrl(addon_handle, True, listitem=play_item)
 
@@ -650,7 +663,7 @@ class CANALvod(object):
 	def __init__(self):
 			  
 		self.OAUTH = 'https://logowanie.pl.canalplus.com/login'#'https://dev.canalplus.com/pl/oauth'
-		self.CREATE_TOKEN = 'https://pass-api-v2.canal-plus.com/provider/services/PL/public/createToken'
+		self.CREATE_TOKEN = 'https://pass-api-v2.canal-plus.com/provider/services/cppol-pl/public/createToken'
 
 		self.mainLOGINurl = 'https://logowanie.pl.canalplus.com/login'
 		self.OAUTH_HEADERS = {
@@ -737,121 +750,26 @@ class CANALvod(object):
 		e = self.EPGid
 
 		if self.LOGGED == 'true':
-			if self.LOGIN and self.PASSWORD and self.LOGUJ == 'true':
-				import time
-				ts = int(time.time())*100
-				a = str(ts)
-				b = str(czas())
-				if not self.DEVID:
-					self.DEVID = '%s-%s'%( b, self.gen_hex_code(12))
-				
-				headers = {
-					'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
-					'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-					'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
-					'DNT': '1',
-					'Connection': 'keep-alive',
-					'Upgrade-Insecure-Requests': '1',
-				}
-				
-				response = sess.get('https://logowanie.pl.canalplus.com/login', headers=headers,verify=False)
-
-				execution = re.findall('execution" value="([^"]+)',response.text)#[0]
-				if execution:
-					execution = execution[0]
-					headers = {
-						'Host': 'logowanie.pl.canalplus.com',
-						'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
-						'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-						'accept-language': 'pl,en-US;q=0.7,en;q=0.3',
-						'content-type': 'application/x-www-form-urlencoded',
-						'origin': 'https://logowanie.pl.canalplus.com',
-						'referer': response.url,
-						'upgrade-insecure-requests': '1',
-						'te': 'trailers',
-					}
-					
-					data = 'username=' + quote(self.LOGIN) + '&password=' + quote(self.PASSWORD) + '&execution=' + execution + '&_eventId=submit&geolocation='
-					
-					response = sess.post(self.mainLOGINurl, headers=headers, data=data, verify=False)
-					av = response.text
-					adres = re.findall('btn btn-primary.*?href="([^"]+)',response.text,re.DOTALL)
-					if not adres:
-						xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Niepoprawne dane logowania',ikona, 8000,False)
-						add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False,fanart=FANART)
-						return False
-					adres = adres[0].replace('&amp;','&') if adres else ''
-
-					response = sess.get(adres, headers=self.HEADERS2,verify=False)
-					a1 = response.url
-					ac = response.cookies
-
-					try:
-						self.PASSid = ac.get('passId',None)
-						self.PASStoken = ac.get('p_pass_token',None)
-						self.CMStoken = ac.get('tokenCMS',None)
-					except:
-						pass
-
-					a11 = self.PASSid
-					a22 = self.PASStoken
-					a33 = self.CMStoken
-
-					authresponse = re.findall('window\.__data\s*=\s*({.*?});.*?window.app_config',response.text,re.DOTALL)
-					
-					data = json.loads(authresponse[0])
-					data = data.get('user',None)
-
-					self.MACROel = data.get("macroEligibility",None)
-					self.MICROel = data.get("microEligibility",None)
-					self.EPGid = data.get('epgidOTT',None)
-					set_setting('PASSid', a11)
-					set_setting('PASStoken', a22)
-					set_setting('MACROel', self.MACROel)
-					set_setting('MICROel', self.MICROel)
-					set_setting('EPGid', self.EPGid)
-
-					params = (
-						('appLocation', 'PL'),
-						('offerZone', 'cppol'),
-						('isActivated', '1'),
-						('collectUserData', '1'),
-						('pdsNormal', '['+self.EPGid+']'),
-						('macros', self.MACROel),
-						('micros', self.MICROel),
-						('isAuthenticated', '1'),
-						('paired', '0'),
-					)
-
-					response = getRequests('https://hodor.canalplus.pro/api/v2/mycanalint/authenticate.json/android/4.1', headers=self.HODORheaders, params=params)
-					self.CMStoken = response['token']
-					set_setting('CMStoken', self.CMStoken)
-					
-					URL_DEVICE_ID = 'https://pass.canal-plus.com/service/HelloJSON.php'
-					
-					header_device_id = {
-						'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
-						'referer':'https://secure-player.canal-plus.com/one/prod/v2/',
-						'Cookie': 'p_pass_token='+self.PASStoken+'&passId='+self.PASStoken
-					}
-					
-					resp_device_id = sess.get(URL_DEVICE_ID, headers=header_device_id,verify=False )
-		
-					self.DEVICE_ID = re.compile('').findall(resp_device_id.text)[0]
-
-					set_setting('device_id', self.DEVICE_ID)
-					
-					LOGGED = 'true'
-					set_setting('logged', LOGGED)
+			# logowanie haslem przeszlo na Okta + Akamai Bot Manager - nie da sie go wykonac skryptem.
+			# Uzytkownik loguje sie w przegladarce i wkleja passId (z zapytania createToken).
+			newpassid = addon.getSetting('passid_input').strip()
+			if newpassid:
+				self.PASSid = unquote(newpassid) if '%' in newpassid else newpassid
+				set_setting('PASSid', self.PASSid)
+				set_setting('passid_input', '')
+			if self.PASSid and self.LOGUJ == 'true':
+				try:
+					self.RefreshPassToken()
+				except Exception as e:
+					xbmc.log('@#@logowanie failed: %s' % str(e), LOGNOTICE)
+					xbmcgui.Dialog().notification('[B]Błąd[/B]', 'passId wygasł lub jest niepoprawny - wklej nowy w ustawieniach.',ikona, 8000,False)
+					add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False,fanart=FANART)
+					return False
+				if newpassid:
 					xbmcgui.Dialog().notification('[B]Ok.[/B]', 'Zalogowano poprawnie.',ikona, 8000, False)
-
-				else:
-					set_setting('PASSid', self.PASSid)
-					set_setting('PASStoken', self.PASStoken)
-					xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Niepoprawne dane logowania',ikona, 8000,False)
-					add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False, fanart=FANART)
 			else:
-				xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Brak danych logowania.',ikona, 8000, False)
+				xbmcgui.Dialog().notification('[B]Błąd[/B]', 'Brak passId - wklej go w ustawieniach.',ikona, 8000, False)
+				add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False, fanart=FANART)
 
 		elif self.LOGGED != 'true':
 			add_item('', '[B][COLOR blue]Zaloguj[/COLOR][/B]', ikona, "login", folder=False, fanart=FANART)
@@ -901,12 +819,23 @@ class CANALvod(object):
 		}
 		
 		out = {}
-		epgresponse = requests.get('https://secure-webtv-static.canal-plus.com/metadata/cppol/all/v2.2/globalchannels.json',headers=headers, verify=False ).json()
-		for channel in epgresponse['channels']:
-			id_ = str(channel['id'])
-			out[id_] = self.getch(channel) 
+		# EPG jest opcjonalne - blad nie moze blokowac listy kanalow
+		response = None
+		try:
+			response = requests.get('https://secure-webtv-static.canal-plus.com/metadata/cppol/all/v2.2/globalchannels.json',headers=headers, verify=False, timeout=TIMEOUT)
+			epgresponse = response.json()
+			channels = epgresponse['channels']
+		except Exception as e:
+			xbmc.log('@#@epgLive failed: HTTP %s %s' % (getattr(response, 'status_code', '?'), str(e)), LOGNOTICE)
+			return out
+		for channel in channels:
+			try:
+				id_ = str(channel['id'])
+				out[id_] = self.getch(channel)
+			except Exception:
+				continue
 
-		return out	
+		return out
 
 	def TVinit(self):
 		self.RefreshPassToken()
@@ -937,18 +866,20 @@ class CANALvod(object):
 		zzzDEVID = '%s-%s'%( b, self.gen_hex_code(12))
 
 		ptok = get_setting('PASStoken')#split('PL=')[-1]
-		data ={"ServiceRequest":{"InData":{"PassData":{"Id":0,"Token":ptok},"UserKeyId":self.DEVICE_ID,"DeviceKeyId":self.DEVID,"PDSData":{"GroupTypes":"1;4"}}}}
+		data ={"ServiceRequest":{"InData":{"UseRmuTokenPlaceHolder":True,"PassData":{"Id":0,"Token":ptok},"UserKeyId":self.DEVICE_ID,"DeviceKeyId":self.DEVID,"PDSData":{"GroupTypes":"1;2;4"},"DeviceSpecificities":{"BpkCompatibility":True}}}}
 
 		data = json.dumps(data)
 		epgs = self.epgLive()
 
-		urlk='https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/3/apps/1/jobs/InitLiveTV'
+		urlk='https://ltv.services.canalplustech.pro/api/V4/zones/cppol/devices/3/apps/1/jobs/InitLiveTV'
 
 		response = sess.post(urlk, headers=headers, data=data, verify=False ).json()
 
 		outdata = response["ServiceResponse"]["OutData"]
 		self.LIVEtoken = outdata["LiveToken"]
 		set_setting('livetoken', self.LIVEtoken)
+		self.RMUtoken = outdata.get("RMUToken", '')
+		set_setting('rmutoken', self.RMUtoken)
 		grupy = outdata["PDS"]["ChannelsGroups"]["ChannelsGroup"]
 		out = []
 		for grupa in grupy:
@@ -999,83 +930,97 @@ class CANALvod(object):
 
 		ptok = get_setting('PASStoken')#split('PL=')[-1]
 		
-		data ={"ServiceRequest":{"InData":{"PassData":{"Id":0,"Token":ptok},"UserKeyId":self.DEVICE_ID,"DeviceKeyId":self.DEVID,"PDSData":{"GroupTypes":"1;4"}}}}
+		data ={"ServiceRequest":{"InData":{"UseRmuTokenPlaceHolder":True,"PassData":{"Id":0,"Token":ptok},"UserKeyId":self.DEVICE_ID,"DeviceKeyId":self.DEVID,"PDSData":{"GroupTypes":"1;2;4"},"DeviceSpecificities":{"BpkCompatibility":True}}}}
 
 		data = json.dumps(data)
 
-		urlk='https://secure-webtv.canal-plus.com/WebPortal/ottlivetv/api/V4/zones/cppol/devices/3/apps/1/jobs/InitLiveTV'
+		urlk='https://ltv.services.canalplustech.pro/api/V4/zones/cppol/devices/3/apps/1/jobs/InitLiveTV'
 
 		response = sess.post(urlk, headers=headers, data=data, verify=False ).json()
 
 		outdata = response["ServiceResponse"]["OutData"]
 		self.LIVEtoken = outdata["LiveToken"]
 		set_setting('livetoken', self.LIVEtoken)
+		self.RMUtoken = outdata.get("RMUToken", '')
+		set_setting('rmutoken', self.RMUtoken)
 
 		return
 
 	def RefreshPassToken(self):
-		headers = {
-			'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 9; SM-J330F Build/PPR1.180610.011)',
-			'Host': 'pass-api-v2.canal-plus.com',
-		}
-		
-		data = {
-			'analytics': 'true',
-			'noCache': 'false',
-			'passId': self.PASSid,
-			'vect': 'Internet',
-			'media': 'Android Phone',
-			'trackingPub': 'true',
-			'portailId': self.portailId
-		}
-
-		data = {
-			'noCache': 'false',
-			'passId': self.PASSid,
-			'deviceId':self.DEVID,
-			'vect': 'Internet',
-			'media': 'PC',
-			'portailId': 'vbdTj7eb6aM.',
-			'zone':'cppol'
-		}
-
 		headers = {
 			'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
 			'Accept': '*/*',
 			'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
 			'Content-Type': 'application/x-www-form-urlencoded',
 			'Origin': 'https://www.canalplus.com',
-			'Connection': 'keep-alive',
+			'Referer': 'https://www.canalplus.com/',
 		}
 
-		response = sess.post(self.CREATE_TOKEN, headers=headers, data=data,verify=False ).json()
+		data = {
+			'portailId': 'vbdTj7eb6aM.',
+			'media': 'web',
+			'vect': 'INTERNET',
+			'passIdType': 'pass',
+			'noCache': 'false',
+			'passId': self.PASSid,
+		}
 
-		self.PASSid = response["response"]["passId"]
-		self.PASStoken = response["response"]["passToken"]
-		a11=self.PASSid
-		a22=self.PASStoken
-		set_setting('PASSid', a11)
-		set_setting('PASStoken', a22)
+		response = sess.post(self.CREATE_TOKEN, headers=headers, data=data, verify=False, timeout=TIMEOUT).json()
+		response = response["response"]
+		if response.get("errorCode", 0) != 0 or not response.get("passToken"):
+			raise Exception('createToken error %s %s' % (response.get("errorCode"), response.get("errorMessage")))
+		userdata = response.get("userData", {})
+		if userdata.get("isAuthenticated") is False:
+			raise Exception('createToken: passId nie jest zalogowany')
+
+		self.PASSid = response["passId"]
+		self.PASStoken = response["passToken"]
+		self.EPGid = userdata.get("epgid_OTT", self.EPGid)
+		self.MACROel = userdata.get("macroEligibility", self.MACROel)
+		self.MICROel = userdata.get("microEligibility", self.MICROel)
+		set_setting('PASSid', self.PASSid)
+		set_setting('PASStoken', self.PASStoken)
+		set_setting('EPGid', self.EPGid)
+		set_setting('MACROel', self.MACROel)
+		set_setting('MICROel', self.MICROel)
+
+		if not self.DEVICE_ID:
+			import uuid
+			self.DEVICE_ID = str(uuid.uuid4())
+			set_setting('device_id', self.DEVICE_ID)
+		if not self.DEVID:
+			self.DEVID = '%s-%s' % (str(czas()), self.gen_hex_code(12))
+			set_setting('devid', self.DEVID)
 
 		params = (
-			('appLocation', 'PL'),
-			('offerZone', 'cppol'),
-			('isActivated', '1'),
-			('collectUserData', '1'),
 			('pdsNormal', '['+self.EPGid+']'),
+			('language', 'pl-pl'),
+			('isAuthenticated', '1'),
+			('isKidsProfile', '0'),
+			('collectUserData', '1'),
 			('macros', self.MACROel),
 			('micros', self.MICROel),
-			('isAuthenticated', '1'),
-			('paired', '0'),
+			('offerLocation', 'pl'),
+			('offerZone', 'cppol'),
 		)
-		response = getRequests('https://hodor.canalplus.pro/api/v2/mycanalint/authenticate.json/android/4.1', headers=self.HODORheaders, params=params)
+		headers = {
+			'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
+			'Origin': 'https://www.canalplus.com',
+			'Referer': 'https://www.canalplus.com/',
+		}
+		response = getRequests('https://hodor.canalplus.pro/api/v2/mycanalint/authenticate.json/webapp/6.0', headers=headers, params=params)
 
-		self.CMStoken = response['token']
-		set_setting('CMStoken', self.CMStoken)
+		# token CMS potrzebny tylko do przegladania VOD - brak nie blokuje logowania
+		if isinstance(response, dict) and response.get('token'):
+			self.CMStoken = response['token']
+			set_setting('CMStoken', self.CMStoken)
+		else:
+			desc = (list(response.keys())[:10], dict((k, str(response[k])[:150]) for k in ('message', 'error', 'errorCode', 'code', 'status', 'title') if k in response)) if isinstance(response, dict) else str(response)[:300]
+			xbmc.log('@#@hodor authenticate: brak tokenu, odpowiedz: %s' % str(desc), LOGNOTICE)
 
 		return
 
-		
+
 	def getContentDemand(self,url):
 		out = []
 		h1 = {

@@ -3,24 +3,14 @@
 	<section id="plugin.video.canalplusvod">
 		<category id="ipla" label="30005">
 			<group id="1">
-                <setting help="" id="username" label="30000" type="string">
+                <setting help="30011" id="passid_input" label="30010" type="string">
                 	<level>0</level>
                 	<default/>
                 	<constraints>
                 		<allowempty>true</allowempty>
                 	</constraints>
                 	<control format="string" type="edit">
-                		<heading>30000</heading>
-                	</control>
-                </setting>
-                <setting help="" id="password" label="30001" type="string">
-                	<level>0</level>
-                	<default/>
-                	<constraints>
-                		<allowempty>true</allowempty>
-                	</constraints>
-                	<control format="string" type="edit">
-                		<heading>30001</heading>
+                		<heading>30010</heading>
                 		<hidden>true</hidden>
                 	</control>
                 </setting>
@@ -43,6 +33,19 @@
 		</category>
 		<category help="" id="drm" label="30008">
 			<group id="1">
+				<setting help="30013" id="maxres" label="30012" type="string">
+					<level>0</level>
+					<default>640p</default>
+					<constraints>
+						<options>
+							<option>480p</option>
+							<option>640p</option>
+							<option>720p</option>
+							<option>1080p</option>
+						</options>
+					</constraints>
+					<control format="string" type="spinner"/>
+				</setting>
 				<setting help="" id="drmcert" label="30009" type="boolean">
 					<level>0</level>
 					<default>false</default>

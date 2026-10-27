@@ -15,6 +15,7 @@ except ImportError:  # Python 2
     from urllib import urlencode,quote,unquote
 
 import re
+import json
 
 import xbmcaddon
 import socket
@@ -25,7 +26,10 @@ import requests
 import urllib3
 
 requests.packages.urllib3.disable_warnings()
-requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':HIGH:!DH:!aNULL'
+#requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += ':HIGH:!DH:!aNULL'
+
+
+
 import ssl
 try:
     _create_unverified_https_context = ssl._create_unverified_context
@@ -36,6 +40,29 @@ else:
 
 import sys
 PY3 = sys.version_info >= (3,0,0)
+try:
+    from urllib3.util.ssl_ import DEFAULT_CIPHERS
+except ImportError:
+    # Defer to system configuration starting with
+    # urllib3 2.0. This will choose the ciphers provided by
+    # Openssl 1.1.1+ or secure system defaults.
+    DEFAULT_CIPHERS = (
+        'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
+        'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
+        '!eNULL:!MD5')
+
+class SSLContextAdapter(requests.adapters.HTTPAdapter):
+    def init_poolmanager(self, *args, **kwargs):
+        print('SSLContextAdapter.init_poolmanager called')
+        context = ssl.create_default_context()
+        context.set_ciphers(DEFAULT_CIPHERS)
+        kwargs['ssl_context'] = context
+        return super(SSLContextAdapter, self).init_poolmanager(*args, **kwargs)
+
+requests.Session().mount('http://', SSLContextAdapter())
+requests.Session().mount('https://', SSLContextAdapter())
+
+
 
 from settings import Settings
 r = Settings()
@@ -83,7 +110,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             result = requests.post(url=licurl, headers=ab, data=challenge,verify=False).content
             if PY3:
                 result = result.decode(encoding='utf-8', errors='strict')
-            licens=re.findall('ontentid=".+?">(.+?)<',result)[0]
+            if result.lstrip().startswith('{'):
+                # DASH (DRM_MKPC_WIDEVINE_DASH): odpowiedz JSON z licencja w base64
+                licens = json.loads(result)['licenseresponse']['clientresponse']['license'][0]['data']
+            else:
+                licens=re.findall('ontentid=".+?">(.+?)<',result)[0]
             if PY3:
                 licens= licens.encode(encoding='utf-8', errors='strict')
         elif 'censetv=' in path:

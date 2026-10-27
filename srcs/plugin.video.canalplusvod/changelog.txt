@@ -1,4 +1,14 @@
-﻿1.7.5.9
+﻿1.8.0.0
+- logowanie przez passId z przegladarki (logowanie haslem przeszlo na Okta + Akamai Bot Manager)
+- nowe API: createToken cppol-pl, hodor webapp/6.0, ltv.services.canalplustech.pro (InitLiveTV, GetLicence), RMUToken
+- VOD: DASH + Widevine (DRM_MKPC_WIDEVINE_DASH), nowy format licencji JSON
+- limit rozdzielczosci (Widevine L3 = SD do 540p), ustawienie w DRM
+- brak EPG nie blokuje listy kanalow
+
+1,7.5.10
+- fix urllib3
+
+1.7.5.9
 - fix logowania (hevet)
 
 1.7.5.8

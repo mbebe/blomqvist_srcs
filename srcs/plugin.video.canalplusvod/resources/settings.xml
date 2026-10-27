@@ -1,16 +1,57 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<settings>
-    <category label="30005">
-        <setting id="username"  type="text" label="30000" default="" />
-        <setting id="password"  type="text" label="30001" option="hidden"  default="" />
-        <setting id="logowanie" type="bool" label="30002" default="false" enable=/>
-    </category>	
-    <category label="30006" >
-        <setting id="auto-view" type="bool" label="30003" default="false" enable=/>
-    </category> 
-    <category label="30008" >
-        <setting id="drmcert" type="bool" label="30009" default="false" enable=/>
-    </category> 	
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<settings version="1">
+	<section id="plugin.video.canalplusvod">
+		<category id="ipla" label="30005">
+			<group id="1">
+                <setting help="30011" id="passid_input" label="30010" type="string">
+                	<level>0</level>
+                	<default/>
+                	<constraints>
+                		<allowempty>true</allowempty>
+                	</constraints>
+                	<control format="string" type="edit">
+                		<heading>30010</heading>
+                		<hidden>true</hidden>
+                	</control>
+                </setting>
+                <setting help="" id="logowanie" label="30002" type="boolean">
+                	<level>0</level>
+                	<default>false</default>
+                	<control type="toggle"/>
+                </setting>
+                
+			</group>
+		</category>
+		<category help="" id="autoview" label="30006">
+			<group id="1">
+				<setting help="" id="auto-view" label="30003" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+			</group>
+		</category>
+		<category help="" id="drm" label="30008">
+			<group id="1">
+				<setting help="30013" id="maxres" label="30012" type="string">
+					<level>0</level>
+					<default>640p</default>
+					<constraints>
+						<options>
+							<option>480p</option>
+							<option>640p</option>
+							<option>720p</option>
+							<option>1080p</option>
+						</options>
+					</constraints>
+					<control format="string" type="spinner"/>
+				</setting>
+				<setting help="" id="drmcert" label="30009" type="boolean">
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+			</group>
+		</category>
+	</section>
 </settings>
-
-

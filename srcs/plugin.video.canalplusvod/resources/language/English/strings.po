@@ -47,3 +47,19 @@ msgstr ""
 msgctxt "#30009"
 msgid "Check license server certificate"
 msgstr ""
+
+msgctxt "#30010"
+msgid "passId from browser (createToken)"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Log in at canalplus.com, DevTools > Network > createToken > Payload > passId. Paste once; it refreshes itself."
+msgstr ""
+
+msgctxt "#30012"
+msgid "Max. resolution"
+msgstr ""
+
+msgctxt "#30013"
+msgid "Widevine L3 (software) only gets keys for SD up to 540p - higher values give audio without video."
+msgstr ""

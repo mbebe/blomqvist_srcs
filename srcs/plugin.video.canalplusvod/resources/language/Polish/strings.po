@@ -47,3 +47,19 @@ msgstr "DRM"
 msgctxt "#30009"
 msgid "Check license server certificate"
 msgstr "Sprawdzanie certyfikatu serwera licencji"
+
+msgctxt "#30010"
+msgid "passId from browser (createToken)"
+msgstr "passId z przeglądarki (createToken)"
+
+msgctxt "#30011"
+msgid "Log in at canalplus.com, DevTools > Network > createToken > Payload > passId. Paste once; it refreshes itself."
+msgstr "Zaloguj się na canalplus.com, DevTools > Sieć > createToken > Payload > passId. Wklej raz, odświeża się sam."
+
+msgctxt "#30012"
+msgid "Max. resolution"
+msgstr "Maks. rozdzielczość"
+
+msgctxt "#30013"
+msgid "Widevine L3 (software) only gets keys for SD up to 540p - higher values give audio without video."
+msgstr "Widevine L3 (programowy) dostaje klucze tylko do SD do 540p - wyższe wartości dają dźwięk bez obrazu."
